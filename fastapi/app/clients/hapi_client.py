@@ -105,3 +105,29 @@ class HapiClient:
         if response.status_code not in (200, 201):
             logger.error("HAPI profile seed failed: %s %s", response.status_code, response.text)
             response.raise_for_status()
+
+    async def ensure_au_bp_profile(self) -> None:
+        """Seed a minimal AU BP Observation profile placeholder for demo validation."""
+        profile_id = "au-vitalsigns-bloodpressure"
+        profile_url = "http://hl7.org.au/fhir/StructureDefinition/au-vitalsigns-bloodpressure"
+        resource = {
+            "resourceType": "StructureDefinition",
+            "id": profile_id,
+            "url": profile_url,
+            "name": "AUVitalSignsBloodPressure",
+            "status": "active",
+            "kind": "resource",
+            "abstract": False,
+            "type": "Observation",
+            "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
+            "derivation": "constraint",
+            "differential": {"element": [{"id": "Observation", "path": "Observation"}]},
+        }
+        response = await self._client.put(
+            f"{self._base}/StructureDefinition/{profile_id}",
+            json=resource,
+            headers={"Content-Type": "application/fhir+json"},
+        )
+        if response.status_code not in (200, 201):
+            logger.error("HAPI BP profile seed failed: %s %s", response.status_code, response.text)
+            response.raise_for_status()

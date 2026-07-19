@@ -171,6 +171,7 @@ async def transform_observations(payload: OruPayload) -> dict[str, Any]:
     )
 
     hapi = HapiClient(app.state.http_client)
+    await hapi.ensure_au_bp_profile()
     observation_ids: list[str] = []
     for obs in observations:
         obs_data = _resource_to_json(obs)
