@@ -75,7 +75,7 @@ class TestBuildPatient:
         assert patient.gender == "male"
 
     def test_gender_unknown(self):
-        patient = build_patient(_sample_payload(gender="X"))
+        patient = build_patient(_sample_payload(gender="U"))
         assert patient.gender == "unknown"
 
     def test_birth_date(self):

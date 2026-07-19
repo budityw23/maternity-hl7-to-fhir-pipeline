@@ -1,4 +1,5 @@
-from pydantic import BaseModel, Field
+# ruff: noqa: N815
+from pydantic import BaseModel, Field, field_validator
 
 
 class NamePayload(BaseModel):
@@ -34,3 +35,20 @@ class AdtPayload(BaseModel):
     address: AddressPayload
     phone: str = ""
     diagnoses: list[DiagnosisPayload] = Field(default_factory=list)
+
+    @field_validator("mrn")
+    @classmethod
+    def mrn_must_not_be_empty(cls, value: str) -> str:
+        if not value or not value.strip():
+            raise ValueError("MRN is required and must not be empty")
+        return value.strip()
+
+    @field_validator("gender")
+    @classmethod
+    def gender_must_be_valid(cls, value: str) -> str:
+        valid = {"F", "M", "O", "U", "A", "N", ""}
+        if value.upper() not in valid:
+            raise ValueError(
+                f"Invalid gender code '{value}'. Must be one of: F, M, O, U, A, N"
+            )
+        return value
