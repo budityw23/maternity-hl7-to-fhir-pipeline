@@ -1,0 +1,85 @@
+version: "3.9"
+
+networks:
+  maternity-net:
+    driver: bridge
+
+volumes:
+  hapi-data:
+  mirth-data:
+
+services:
+  mirth:
+    image: nextgenhealthcare/connect:4.5
+    container_name: mirth
+    ports:
+      - "6661:6661"
+      - "8443:8443"
+    environment:
+      DATABASE: derby
+      DATABASE_URL: jdbc:derby:/opt/connect/appdata/mirthdb;create=true
+    volumes:
+      - mirth-data:/opt/connect/appdata
+      - ./mirth/channels:/opt/connect/channels:ro
+      - ./deadletter:/opt/connect/deadletter
+      - ./logs/mirth:/opt/connect/logs
+    networks: [maternity-net]
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fk", "-H", "X-Requested-With: OpenAPI", "https://localhost:8443/api/server/status"]
+      interval: 30s
+      retries: 5
+
+  fastapi:
+    build:
+      context: ./fastapi
+      dockerfile: Dockerfile
+    container_name: fastapi
+    ports:
+      - "8000:8000"
+    environment:
+      HAPI_BASE_URL: http://hapi:8080/fhir
+      LOG_LEVEL: INFO
+      MRN_SYSTEM: http://hospital.local/mrn
+      IHI_SYSTEM: http://ns.electronichealth.net.au/id/hi/ihi/1.0
+    volumes:
+      - ./logs/fastapi:/app/logs
+      - ./deadletter:/app/deadletter
+    networks: [maternity-net]
+    depends_on:
+      hapi:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      retries: 5
+
+  hapi:
+    build:
+      context: ./hapi
+      dockerfile: Dockerfile
+    image: maternity-hapi:v7.0.3
+    container_name: hapi
+    ports:
+      - "8080:8080"
+    environment:
+      hapi.fhir.fhir_version: R4
+      hapi.fhir.validation.enabled: "false"
+      hapi.fhir.validation.requests_enabled: "false"
+      hapi.fhir.validation.responses_enabled: "true"
+      HAPI_FHIR_VALIDATION_ENABLED: "false"
+      HAPI_FHIR_VALIDATION_REQUESTS_ENABLED: "false"
+      HAPI_FHIR_VALIDATION_RESPONSES_ENABLED: "true"
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/app/config/application.yaml
+      hapi.fhir.cors.allow_credentials: "true"
+      hapi.fhir.cors.allowed_origin: "*"
+    volumes:
+      - hapi-data:/data/hapi
+    networks: [maternity-net]
+    healthcheck:
+      test: ["CMD", "java", "/app/HealthCheck.java", "http://localhost:8080/fhir/metadata"]
+      interval: 30s
+      retries: 10
+      start_period: 60s

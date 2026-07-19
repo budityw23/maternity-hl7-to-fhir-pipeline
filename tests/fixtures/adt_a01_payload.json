@@ -1,0 +1,30 @@
+{
+    "correlationId": "550e8400-e29b-41d4-a716-446655440000",
+    "messageType": "ADT^A01",
+    "mrn": "1234567",
+    "ihi": "8003608166690503",
+    "name": {
+        "family": "TEST",
+        "given": "PATIENT",
+        "middle": "MARY",
+        "prefix": "MS"
+    },
+    "birthDate": "19920315",
+    "gender": "F",
+    "address": {
+        "line": "14 SAMPLE ST",
+        "city": "SYDNEY",
+        "state": "NSW",
+        "postalCode": "2000",
+        "country": "AU"
+    },
+    "phone": "0412345678",
+    "diagnoses": [
+        {
+            "code": "O80",
+            "display": "Encounter for full-term uncomplicated delivery",
+            "codeSystem": "I10",
+            "recordedDate": "20260527093000"
+        }
+    ]
+}

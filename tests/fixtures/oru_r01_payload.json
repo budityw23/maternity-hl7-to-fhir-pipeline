@@ -1,0 +1,66 @@
+{
+    "correlationId": "770e8400-e29b-41d4-a716-446655440002",
+    "messageType": "ORU^R01",
+    "mrn": "1234567",
+    "visitNumber": "VN00012",
+    "orderCode": "ANC",
+    "orderDisplay": "Antenatal Checkup",
+    "observations": [
+        {
+            "setId": 1,
+            "valueType": "NM",
+            "code": "8480-6",
+            "display": "Systolic blood pressure",
+            "codeSystem": "LN",
+            "value": 118,
+            "unitCode": "mm[Hg]",
+            "unitDisplay": "millimeters of mercury",
+            "referenceRange": "90-140",
+            "abnormalFlag": "N",
+            "status": "F",
+            "observationDatetime": "20260420103000"
+        },
+        {
+            "setId": 2,
+            "valueType": "NM",
+            "code": "8462-4",
+            "display": "Diastolic blood pressure",
+            "codeSystem": "LN",
+            "value": 76,
+            "unitCode": "mm[Hg]",
+            "unitDisplay": "millimeters of mercury",
+            "referenceRange": "60-90",
+            "abnormalFlag": "N",
+            "status": "F",
+            "observationDatetime": "20260420103000"
+        },
+        {
+            "setId": 3,
+            "valueType": "NM",
+            "code": "29463-7",
+            "display": "Body weight",
+            "codeSystem": "LN",
+            "value": 68.5,
+            "unitCode": "kg",
+            "unitDisplay": "kilogram",
+            "referenceRange": "",
+            "abnormalFlag": "N",
+            "status": "F",
+            "observationDatetime": "20260420103000"
+        },
+        {
+            "setId": 4,
+            "valueType": "NM",
+            "code": "55283-6",
+            "display": "Fetal heart rate",
+            "codeSystem": "LN",
+            "value": 145,
+            "unitCode": "/min",
+            "unitDisplay": "per minute",
+            "referenceRange": "110-160",
+            "abnormalFlag": "N",
+            "status": "F",
+            "observationDatetime": "20260420103000"
+        }
+    ]
+}

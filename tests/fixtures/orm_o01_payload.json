@@ -1,0 +1,22 @@
+{
+    "correlationId": "660e8400-e29b-41d4-a716-446655440001",
+    "messageType": "ORM^O01",
+    "mrn": "1234567",
+    "visitNumber": "VN00012",
+    "patientClass": "O",
+    "admitDatetime": "20260420100000",
+    "dischargeDatetime": "20260420110000",
+    "location": {
+        "ward": "MAT_CLINIC",
+        "room": "OPD",
+        "facility": "RPA"
+    },
+    "attendingDoctor": {
+        "id": "DR_SMITH",
+        "familyName": "SMITH",
+        "givenName": "SARAH"
+    },
+    "orderControl": "NW",
+    "serviceCode": "424525001",
+    "serviceDisplay": "Antenatal care"
+}

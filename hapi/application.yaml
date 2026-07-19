@@ -1,0 +1,10 @@
+hapi:
+  fhir:
+    fhir_version: R4
+    validation:
+      enabled: false
+      requests_enabled: false
+      responses_enabled: false
+    cors:
+      allow_credentials: true
+      allowed_origin: '*'
