@@ -11,6 +11,8 @@ from app.clients.hapi_client import HapiClient
 from app.clients.patient_resolver import resolve_patient_id
 from app.config import settings
 from app.errors import problem_response, register_error_handlers, write_deadletter
+from app.logging_setup import setup_logging
+from app.middleware import CorrelationIdMiddleware
 from app.models.adt_payload import AdtPayload
 from app.models.orm_payload import OrmPayload
 from app.models.oru_payload import OruPayload
@@ -18,6 +20,8 @@ from app.transformers.condition import build_conditions
 from app.transformers.encounter import VISIT_NUMBER_SYSTEM, build_encounter
 from app.transformers.observation import build_observations
 from app.transformers.patient import build_patient
+
+setup_logging(settings.log_level)
 
 
 @asynccontextmanager
@@ -34,6 +38,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 register_error_handlers(app)
+app.add_middleware(CorrelationIdMiddleware)
 
 
 def _resource_to_json(resource: Any) -> dict[str, Any]:

@@ -9,6 +9,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.logging_setup import correlation_id_var
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_DEADLETTER_DIR = "./deadletter"
@@ -100,6 +102,11 @@ def register_error_handlers(app: FastAPI) -> None:
         except Exception:
             payload = body_bytes.decode("utf-8", errors="replace") if body_bytes else None
 
+        if not correlation_id:
+            ctx_corr = correlation_id_var.get("")
+            if ctx_corr:
+                correlation_id = ctx_corr
+
         detail = f"Validation failed: {len(errors)} error(s)"
         logger.warning("Validation error correlationId=%s: %s", correlation_id, errors)
 
@@ -131,9 +138,11 @@ def register_error_handlers(app: FastAPI) -> None:
     async def unhandled_exception_handler(
         request: Request, exc: Exception
     ) -> JSONResponse:
-        logger.exception("Unhandled exception: %s", exc)
+        corr_id = correlation_id_var.get("")
+        logger.exception("Unhandled exception correlationId=%s: %s", corr_id, exc)
         return problem_response(
             status=500,
             title="Internal Server Error",
             detail="An unexpected error occurred. Check server logs.",
+            correlation_id=corr_id or None,
         )
