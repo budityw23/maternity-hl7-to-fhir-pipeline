@@ -2,16 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./fastapi
 
     steps:
       - uses: actions/checkout@v4
@@ -21,13 +18,21 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
+        working-directory: ./fastapi
         run: pip install ".[dev]"
 
       - name: Lint with ruff
-        run: ruff check app/ tests/
+        working-directory: ./fastapi
+        run: ruff check app/
+
+      - name: Lint tests with ruff
+        run: ruff check tests/
 
       - name: Type check with mypy
-        run: mypy app/
+        working-directory: ./fastapi
+        run: mypy app/ --ignore-missing-imports
 
-      - name: Run unit tests
-        run: pytest tests/unit/ -v
+      - name: Run tests with coverage
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          python -m pytest tests/ -v --cov=fastapi/app --cov-report=term-missing --cov-fail-under=80

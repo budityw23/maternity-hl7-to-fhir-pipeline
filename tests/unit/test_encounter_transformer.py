@@ -3,7 +3,7 @@ from app.models.orm_payload import (
     OrmPayload,
     ParticipantPayload,
 )
-from app.transformers.encounter import _hl7_datetime_to_iso, build_encounter
+from app.transformers.encounter import build_encounter
 from app.valuesets.hl7_to_fhir_encounter import map_encounter_status, map_patient_class
 
 

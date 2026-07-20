@@ -1,7 +1,8 @@
 import json
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -25,7 +26,7 @@ setup_logging(settings.log_level)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.http_client = httpx.AsyncClient(timeout=10.0)
     yield
     await app.state.http_client.aclose()
@@ -43,8 +44,8 @@ app.add_middleware(CorrelationIdMiddleware)
 
 def _resource_to_json(resource: Any) -> dict[str, Any]:
     if hasattr(resource, "model_dump"):
-        return resource.model_dump(mode="json", exclude_none=True)
-    return json.loads(resource.json(by_alias=True, exclude_none=True))
+        return cast("dict[str, Any]", resource.model_dump(mode="json", exclude_none=True))
+    return cast("dict[str, Any]", json.loads(resource.json(by_alias=True, exclude_none=True)))
 
 
 @app.get("/health")
@@ -68,11 +69,11 @@ async def health_check() -> dict[str, Any]:
 
 def _payload_to_json(payload: Any) -> dict[str, Any]:
     if hasattr(payload, "model_dump"):
-        return payload.model_dump(mode="json")
-    return payload.dict()
+        return cast("dict[str, Any]", payload.model_dump(mode="json"))
+    return cast("dict[str, Any]", payload.dict())
 
 
-def _hapi_problem(exc: httpx.HTTPError, correlation_id: str, payload: Any):
+def _hapi_problem(exc: httpx.HTTPError, correlation_id: str, payload: Any) -> Any:
     response = exc.response if isinstance(exc, httpx.HTTPStatusError) else None
     status_code = response.status_code if response is not None else "unavailable"
     response_text = response.text if response is not None else str(exc)

@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -37,7 +37,7 @@ class HapiClient:
             logger.error("HAPI upsert failed: %s %s", response.status_code, response.text)
             response.raise_for_status()
 
-        body = response.json()
+        body = cast("dict[str, Any] | list[Any] | str | int | float | bool | None", response.json())
         if isinstance(body, dict) and body.get("id"):
             return str(body["id"])
 
@@ -45,7 +45,7 @@ class HapiClient:
         if location:
             parts = [part for part in location.split("/") if part and part != "_history"]
             if parts:
-                return parts[-1]
+                return str(parts[-1])
 
         return "unknown"
 
@@ -68,7 +68,7 @@ class HapiClient:
             logger.error("HAPI create failed: %s %s", response.status_code, response.text)
             response.raise_for_status()
 
-        body = response.json()
+        body = cast("dict[str, Any] | list[Any] | str | int | float | bool | None", response.json())
         if isinstance(body, dict) and body.get("id"):
             return str(body["id"])
 
@@ -76,7 +76,7 @@ class HapiClient:
         if location:
             parts = [part for part in location.split("/") if part and part != "_history"]
             if parts:
-                return parts[-1]
+                return str(parts[-1])
 
         return "unknown"
 
