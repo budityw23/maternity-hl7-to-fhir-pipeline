@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+input=""
+output=""
+args=()
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -i|--input)
+      input="$2"
+      shift 2
+      ;;
+    -o|--output)
+      output="$2"
+      shift 2
+      ;;
+    *)
+      args+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$input" || -z "$output" ]]; then
+  docker run --rm minlag/mermaid-cli "${args[@]}"
+  exit 0
+fi
+
+input_abs="$(realpath "$input")"
+output_abs="$(realpath -m "$output")"
+input_dir="$(dirname "$input_abs")"
+output_dir="$(dirname "$output_abs")"
+input_file="$(basename "$input_abs")"
+output_file="$(basename "$output_abs")"
+
+mkdir -p "$output_dir"
+
+docker run --rm \
+  -u "$(id -u):$(id -g)" \
+  -v "$input_dir:/input:ro" \
+  -v "$output_dir:/output" \
+  minlag/mermaid-cli \
+  -i "/input/$input_file" \
+  -o "/output/$output_file" \
+  "${args[@]}"
