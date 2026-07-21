@@ -3,12 +3,14 @@ import re
 from fhir.resources.codeableconcept import CodeableConcept
 from fhir.resources.coding import Coding
 from fhir.resources.condition import Condition
+from fhir.resources.meta import Meta
 from fhir.resources.narrative import Narrative
 from fhir.resources.reference import Reference
 
 from app.models.adt_payload import AdtPayload, DiagnosisPayload
 
 ICD10AM_SYSTEM = "http://hl7.org.au/fhir/CodeSystem/icd-10-am"
+AU_CONDITION_PROFILE = "http://hl7.org.au/fhir/StructureDefinition/au-condition"
 CLINICAL_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-clinical"
 VERIFICATION_STATUS_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-ver-status"
 CATEGORY_SYSTEM = "http://terminology.hl7.org/CodeSystem/condition-category"
@@ -30,6 +32,7 @@ def build_condition(
 ) -> Condition:
     """Build a single FHIR Condition from a DiagnosisPayload."""
     condition = Condition(
+        meta=Meta(profile=[AU_CONDITION_PROFILE]),
         text=Narrative(
             status="generated",
             div=f'<div xmlns="http://www.w3.org/1999/xhtml">Condition {diagnosis.code}</div>',

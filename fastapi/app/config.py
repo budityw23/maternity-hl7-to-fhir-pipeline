@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     mrn_system: str = "http://hospital.local/mrn"
     ihi_system: str = "http://ns.electronichealth.net.au/id/hi/ihi/1.0"
+    validate_before_persist: bool = False
 
     model_config = {"env_prefix": ""}
 

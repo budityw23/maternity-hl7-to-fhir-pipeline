@@ -4,6 +4,7 @@ from fhir.resources.R4B.codeableconcept import CodeableConcept
 from fhir.resources.R4B.coding import Coding
 from fhir.resources.R4B.encounter import Encounter
 from fhir.resources.R4B.identifier import Identifier
+from fhir.resources.R4B.meta import Meta
 from fhir.resources.R4B.narrative import Narrative
 from fhir.resources.R4B.period import Period
 from fhir.resources.R4B.reference import Reference
@@ -12,6 +13,7 @@ from app.models.orm_payload import OrmPayload
 from app.valuesets.hl7_to_fhir_encounter import map_encounter_status, map_patient_class
 
 VISIT_NUMBER_SYSTEM = "http://hospital.local/visit-number"
+AU_ENCOUNTER_PROFILE = "http://hl7.org.au/fhir/StructureDefinition/au-encounter"
 PARTICIPATION_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType"
 SNOMED_SYSTEM = "http://snomed.info/sct"
 ANTENATAL_CARE_CODE = "424525001"
@@ -86,6 +88,7 @@ def build_encounter(
     }
 
     encounter = Encounter(
+        meta=Meta(profile=[AU_ENCOUNTER_PROFILE]),
         text=Narrative(
             status="generated",
             div=f'<div xmlns="http://www.w3.org/1999/xhtml">Encounter {payload.visitNumber}</div>',

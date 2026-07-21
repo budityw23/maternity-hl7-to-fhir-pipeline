@@ -250,6 +250,7 @@ curl -s "http://localhost:8080/fhir/Observation?code=85354-9"
 | `POST` | `/fhir/Patient` | ADT flat JSON -> Patient + Condition(s) |
 | `POST` | `/fhir/Encounter` | ORM flat JSON -> Encounter |
 | `POST` | `/fhir/Observation/bundle` | ORU observations -> Observation(s) with BP merge |
+| `POST` | `/fhir/validate/{resource_type}` | Validate a FHIR resource via HAPI `$validate` |
 
 ## Error Handling
 
@@ -281,7 +282,7 @@ cd fastapi && ruff check app/
 cd fastapi && mypy app/ --ignore-missing-imports
 ```
 
-**Coverage**: 162 tests (144 unit + 18 integration), 91% line coverage.
+**Coverage**: 173 tests and 90% line coverage.
 
 ## Project Structure
 
@@ -362,6 +363,41 @@ maternity-hl7-to-fhir/
 | No PHI in INFO logs | Operational logs identify messages without logging names or dates of birth |
 | AU profile metadata | Patient, Condition, Encounter, and BP Observation include AU profile URLs |
 | AEST datetime output | HL7 timestamps are converted to ISO datetimes with `+10:00` offset |
+
+## FHIR Validation
+
+Resources are validated at two levels:
+
+1. **Client-side** (always on): `fhir.resources` Pydantic models validate structure before HAPI submission.
+2. **Server-side** (opt-in): HAPI `$validate` checks profile conformance against loaded StructureDefinitions.
+
+### Enable Pre-Persist Validation
+
+```bash
+# In docker-compose.yml or .env
+VALIDATE_BEFORE_PERSIST=true
+```
+
+When enabled, each resource is validated via `$validate` before persisting. Validation errors return `422` with diagnostic messages.
+
+### Validate a Resource Manually
+
+```bash
+curl -s -X POST http://localhost:8000/fhir/validate/Patient \
+  -H "Content-Type: application/json" \
+  -d '{"resourceType": "Patient", "name": [{"family": "Test"}]}' | python -m json.tool
+```
+
+### AU Base Profiles Applied
+
+| Resource | Profile URL |
+|---|---|
+| Patient | `http://hl7.org.au/fhir/StructureDefinition/au-patient` |
+| Condition | `http://hl7.org.au/fhir/StructureDefinition/au-condition` |
+| Encounter | `http://hl7.org.au/fhir/StructureDefinition/au-encounter` |
+| Observation (BP) | `http://hl7.org.au/fhir/StructureDefinition/au-vitalsigns-bloodpressure` |
+
+> **Note**: The demo seeds minimal placeholder StructureDefinitions. For full profile validation, load the [AU Base IG package](https://build.fhir.org/ig/hl7au/au-fhir-base/) into HAPI.
 
 ## Demo
 

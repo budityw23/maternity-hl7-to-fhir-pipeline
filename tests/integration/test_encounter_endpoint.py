@@ -17,6 +17,11 @@ def _hapi_mock_with_patient():
             },
         )
     )
+    mock.put("/StructureDefinition/au-encounter").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "au-encounter"}
+        )
+    )
     mock.put("/Encounter").mock(
         return_value=Response(201, json={"resourceType": "Encounter", "id": "enc-1"})
     )

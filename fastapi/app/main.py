@@ -101,6 +101,43 @@ def _hapi_problem(exc: httpx.HTTPError, correlation_id: str, payload: Any) -> An
     )
 
 
+async def _validate_if_enabled(
+    hapi: HapiClient,
+    resource_type: str,
+    resource_data: dict[str, Any],
+    correlation_id: str,
+) -> None:
+    """Validate resource via HAPI $validate when enabled in config."""
+    if not settings.validate_before_persist:
+        return
+
+    logger = logging.getLogger("app.fhir.validation")
+    logger.info(
+        "Validating %s before persist correlationId=%s",
+        resource_type,
+        correlation_id,
+    )
+
+    outcome = await hapi.validate_resource(resource_type, resource_data)
+    if outcome:
+        issues = outcome.get("issue", [])
+        error_messages = [
+            issue.get("diagnostics", "Unknown validation error")
+            for issue in issues
+            if issue.get("severity") in ("error", "fatal")
+        ]
+        logger.warning(
+            "Validation failed for %s correlationId=%s: %s",
+            resource_type,
+            correlation_id,
+            "; ".join(error_messages),
+        )
+        raise HTTPException(
+            status_code=422,
+            detail=f"{resource_type} failed AU profile validation: {'; '.join(error_messages)}",
+        )
+
+
 @app.post("/fhir/Patient")
 async def transform_patient(payload: AdtPayload) -> Any:
     logger = logging.getLogger("app.fhir.patient")
@@ -116,6 +153,8 @@ async def transform_patient(payload: AdtPayload) -> Any:
 
         hapi = HapiClient(app.state.http_client)
         await hapi.ensure_au_patient_profile()
+        await hapi.ensure_au_condition_profile()
+        await _validate_if_enabled(hapi, "Patient", patient_data, payload.correlationId)
         identifier_query = f"{settings.mrn_system}|{payload.mrn}"
         patient_id = await hapi.upsert_resource("Patient", patient_data, identifier_query)
 
@@ -131,6 +170,7 @@ async def transform_patient(payload: AdtPayload) -> Any:
             conditions = build_conditions(payload, patient_reference)
             for condition in conditions:
                 condition_data = _resource_to_json(condition)
+                await _validate_if_enabled(hapi, "Condition", condition_data, payload.correlationId)
                 condition_id = await hapi.create_resource("Condition", condition_data)
                 condition_ids.append(condition_id)
                 logger.info(
@@ -171,6 +211,8 @@ async def transform_encounter(payload: OrmPayload) -> Any:
         encounter_data = _resource_to_json(encounter)
 
         hapi = HapiClient(app.state.http_client)
+        await hapi.ensure_au_encounter_profile()
+        await _validate_if_enabled(hapi, "Encounter", encounter_data, payload.correlationId)
         identifier_query = f"{VISIT_NUMBER_SYSTEM}|{payload.visitNumber}"
         encounter_id = await hapi.upsert_resource("Encounter", encounter_data, identifier_query)
 
@@ -224,6 +266,7 @@ async def transform_observations(payload: OruPayload) -> Any:
         observation_ids: list[str] = []
         for obs in observations:
             obs_data = _resource_to_json(obs)
+            await _validate_if_enabled(hapi, "Observation", obs_data, payload.correlationId)
             obs_id = await hapi.create_resource("Observation", obs_data)
             observation_ids.append(obs_id)
             logger.info(
@@ -238,3 +281,23 @@ async def transform_observations(payload: OruPayload) -> Any:
         }
     except httpx.HTTPError as exc:
         return _hapi_problem(exc, payload.correlationId, payload)
+
+
+@app.post("/fhir/validate/{resource_type}")
+async def validate_resource(resource_type: str, payload: dict[str, Any]) -> Any:
+    """Validate a FHIR resource against HAPI's loaded profiles."""
+    logger = logging.getLogger("app.fhir.validation")
+    logger.info("Validating %s resource", resource_type)
+
+    url = f"{settings.hapi_base_url}/{resource_type}/$validate"
+    headers = {"Content-Type": "application/fhir+json"}
+
+    try:
+        response = await app.state.http_client.post(
+            url,
+            json=payload,
+            headers=headers,
+        )
+        return response.json()
+    except httpx.HTTPError as exc:
+        return _hapi_problem(exc, "validate", payload)

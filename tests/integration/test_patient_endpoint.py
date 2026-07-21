@@ -13,6 +13,11 @@ def _hapi_mock():
             200, json={"resourceType": "StructureDefinition", "id": "au-patient"}
         )
     )
+    mock.put("/StructureDefinition/au-condition").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "au-condition"}
+        )
+    )
     mock.put("/Patient").mock(
         return_value=Response(
             201,

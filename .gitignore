@@ -45,3 +45,6 @@ Thumbs.db
 .claude/
 .codex/
 .agents/
+
+# Internal docs (planning, execution, articles)
+docs/
