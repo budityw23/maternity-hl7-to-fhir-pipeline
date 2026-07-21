@@ -2,7 +2,7 @@
 
 > End-to-end HL7 v2.5 -> FHIR R4 transformation pipeline for Australian maternity care, featuring Mirth Connect integration, AU Base profile metadata, and blood pressure panel merging.
 
-[![CI](https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml/badge.svg)](https://github.com/<OWNER>/<REPO>/actions/workflows/ci.yml)
+[![CI](https://github.com/budityw23/maternity-hl7-to-fhir-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/budityw23/maternity-hl7-to-fhir-pipeline/actions/workflows/ci.yml)
 
 > **SYNTHETIC DATA ONLY** - All patient data in this repository is synthetic and generated for demonstration purposes. Not for clinical use.
 
@@ -333,8 +333,8 @@ maternity-hl7-to-fhir/
 |   |-- reset.sh                    # Full reset
 |   `-- demo.sh                     # Walkthrough demo
 |-- tests/
-|   |-- unit/                       # 144 unit tests
-|   `-- integration/                # 18 integration tests
+|   |-- unit/                       # 153 unit tests
+|   `-- integration/                # 20 integration tests
 |-- deadletter/                     # Failed message store (gitignored)
 |-- logs/                           # Runtime logs (gitignored)
 `-- .github/workflows/ci.yml        # CI: lint + type check + test
