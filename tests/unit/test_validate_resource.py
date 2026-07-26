@@ -3,9 +3,8 @@
 import pytest
 import pytest_asyncio
 import respx
-from httpx import AsyncClient, Response
-
 from app.clients.hapi_client import HapiClient
+from httpx import AsyncClient, Response
 
 
 @pytest_asyncio.fixture

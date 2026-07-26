@@ -1,8 +1,7 @@
 import pytest
 import respx
-from httpx import ASGITransport, AsyncClient, Response
-
 from app.main import app
+from httpx import ASGITransport, AsyncClient, Response
 
 
 def _hapi_mock_full():
@@ -196,7 +195,6 @@ class TestObservationEndpoint:
     async def test_empty_mrn_returns_422(self):
         payload = self._valid_payload()
         payload["mrn"] = ""
-        async with app.router.lifespan_context(app):
-            async with await _client() as client:
-                response = await client.post("/fhir/Observation/bundle", json=payload)
+        async with app.router.lifespan_context(app), await _client() as client:
+            response = await client.post("/fhir/Observation/bundle", json=payload)
         assert response.status_code == 422

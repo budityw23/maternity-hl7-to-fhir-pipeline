@@ -20,11 +20,10 @@ by the live MLLP smoke test documented in ``mirth/README.md``.
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
-
 from app.models.adt_payload import AdtPayload
 from app.models.orm_payload import OrmPayload
 from app.models.oru_payload import OruPayload
+from pydantic import ValidationError
 
 SAMPLES = Path(__file__).resolve().parents[2] / "samples"
 

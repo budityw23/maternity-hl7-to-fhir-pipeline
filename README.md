@@ -6,6 +6,13 @@
 
 > **SYNTHETIC DATA ONLY** - All patient data in this repository is synthetic and generated for demonstration purposes. Not for clinical use.
 
+## Articles
+
+Two write-ups walk through the thinking behind this project:
+
+- **[Bridging Legacy Hospital Messages to Modern Healthcare APIs](https://dev.to/budiwidhiyanto/maternity-hl7-to-fhir-pipeline-bridging-legacy-hospital-messages-to-modern-healthcare-apis-m1o)** — the end-to-end architecture and design decisions: HL7 v2 → FHIR R4 mapping, AU Base profiles, blood-pressure panel merging, idempotency, error handling, and correlation IDs.
+- **[Why I Put Mirth Connect in Front of FastAPI Instead of Parsing HL7 in Python](https://dev.to/budiwidhiyanto/why-i-put-mirth-connect-in-front-of-fastapi-instead-of-parsing-hl7-in-python-jh3)** — why the pipeline splits protocol handling (Mirth: MLLP, HL7 parsing, routing, ACK/NACK) from transformation (FastAPI: FHIR mapping, Pydantic validation), and the trade-offs of that boundary.
+
 ## Architecture
 
 ```mermaid

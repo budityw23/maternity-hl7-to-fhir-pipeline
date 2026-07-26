@@ -1,8 +1,7 @@
 import pytest
 import respx
-from httpx import ASGITransport, AsyncClient, Response
-
 from app.main import app
+from httpx import ASGITransport, AsyncClient, Response
 
 
 def _hapi_mock_with_patient():
@@ -122,18 +121,16 @@ class TestEncounterEndpoint:
 
     @pytest.mark.asyncio
     async def test_empty_visit_number_returns_422(self):
-        async with app.router.lifespan_context(app):
-            async with await _client() as client:
-                response = await client.post(
-                    "/fhir/Encounter", json=self._valid_payload(visitNumber="")
-                )
+        async with app.router.lifespan_context(app), await _client() as client:
+            response = await client.post(
+                "/fhir/Encounter", json=self._valid_payload(visitNumber="")
+            )
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_empty_mrn_returns_422(self):
-        async with app.router.lifespan_context(app):
-            async with await _client() as client:
-                response = await client.post(
-                    "/fhir/Encounter", json=self._valid_payload(mrn="")
-                )
+        async with app.router.lifespan_context(app), await _client() as client:
+            response = await client.post(
+                "/fhir/Encounter", json=self._valid_payload(mrn="")
+            )
         assert response.status_code == 422

@@ -1,9 +1,8 @@
 import pytest
-from pydantic import ValidationError
-
 from app.models.adt_payload import AdtPayload
 from app.models.orm_payload import OrmPayload
 from app.models.oru_payload import ObservationPayload, OruPayload
+from pydantic import ValidationError
 
 
 class TestAdtPayloadValidation:

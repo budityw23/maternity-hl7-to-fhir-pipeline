@@ -1,8 +1,7 @@
 import pytest
 import respx
-from httpx import ASGITransport, AsyncClient, Response
-
 from app.main import app
+from httpx import ASGITransport, AsyncClient, Response
 
 
 def _hapi_mock():
@@ -121,47 +120,45 @@ class TestPatientEndpoint:
 
     @pytest.mark.asyncio
     async def test_empty_mrn_returns_422(self):
-        async with app.router.lifespan_context(app):
-            async with await _client() as client:
-                response = await client.post(
-                    "/fhir/Patient",
-                    json={
-                        "correlationId": "int-test-003",
-                        "mrn": "",
-                        "name": {"family": "Smith", "given": "Jane"},
-                        "birthDate": "19920315",
-                        "gender": "F",
-                        "address": {
-                            "line": "1 Test St",
-                            "city": "Sydney",
-                            "state": "NSW",
-                            "postalCode": "2000",
-                        },
+        async with app.router.lifespan_context(app), await _client() as client:
+            response = await client.post(
+                "/fhir/Patient",
+                json={
+                    "correlationId": "int-test-003",
+                    "mrn": "",
+                    "name": {"family": "Smith", "given": "Jane"},
+                    "birthDate": "19920315",
+                    "gender": "F",
+                    "address": {
+                        "line": "1 Test St",
+                        "city": "Sydney",
+                        "state": "NSW",
+                        "postalCode": "2000",
                     },
-                )
+                },
+            )
         assert response.status_code == 422
         assert response.headers["content-type"] == "application/problem+json"
 
     @pytest.mark.asyncio
     async def test_invalid_gender_returns_422(self):
-        async with app.router.lifespan_context(app):
-            async with await _client() as client:
-                response = await client.post(
-                    "/fhir/Patient",
-                    json={
-                        "correlationId": "int-test-004",
-                        "mrn": "1234567",
-                        "name": {"family": "Smith", "given": "Jane"},
-                        "birthDate": "19920315",
-                        "gender": "Z",
-                        "address": {
-                            "line": "1 Test St",
-                            "city": "Sydney",
-                            "state": "NSW",
-                            "postalCode": "2000",
-                        },
+        async with app.router.lifespan_context(app), await _client() as client:
+            response = await client.post(
+                "/fhir/Patient",
+                json={
+                    "correlationId": "int-test-004",
+                    "mrn": "1234567",
+                    "name": {"family": "Smith", "given": "Jane"},
+                    "birthDate": "19920315",
+                    "gender": "Z",
+                    "address": {
+                        "line": "1 Test St",
+                        "city": "Sydney",
+                        "state": "NSW",
+                        "postalCode": "2000",
                     },
-                )
+                },
+            )
         assert response.status_code == 422
 
     @pytest.mark.asyncio

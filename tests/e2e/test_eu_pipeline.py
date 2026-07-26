@@ -50,7 +50,7 @@ def _is_eu_mode(fastapi_http: httpx.Client) -> bool:
             return EU_PATIENT_PROFILE in profiles
         finally:
             hapi.close()
-    except Exception:
+    except (httpx.ConnectError, httpx.TimeoutException, KeyError, IndexError):
         return False
 
 

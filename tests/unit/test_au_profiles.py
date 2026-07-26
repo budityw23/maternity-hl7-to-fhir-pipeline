@@ -11,7 +11,10 @@ from app.models.oru_payload import ObservationPayload
 from app.profiles.au_profile import AU_PROFILE
 from app.transformers.condition import build_condition
 from app.transformers.encounter import build_encounter
-from app.transformers.observation import _build_bp_panel_observation, _build_single_observation
+from app.transformers.observation import (
+    _build_bp_panel_observation,
+    _build_single_observation,
+)
 from app.transformers.patient import build_patient
 
 

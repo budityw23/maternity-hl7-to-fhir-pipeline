@@ -2,10 +2,9 @@ import os
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
-
 from app.config import Settings
 from app.profiles.eu_profile import build_eu_profile
+from httpx import ASGITransport, AsyncClient, Response
 
 EU_PROFILE = build_eu_profile("uk")
 

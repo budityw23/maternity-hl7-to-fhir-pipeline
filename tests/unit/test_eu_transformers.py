@@ -1,4 +1,9 @@
-from app.models.adt_payload import AddressPayload, AdtPayload, DiagnosisPayload, NamePayload
+from app.models.adt_payload import (
+    AddressPayload,
+    AdtPayload,
+    DiagnosisPayload,
+    NamePayload,
+)
 from app.models.orm_payload import LocationPayload, OrmPayload, ParticipantPayload
 from app.models.oru_payload import ObservationPayload, OruPayload
 from app.profiles.eu_profile import build_eu_profile

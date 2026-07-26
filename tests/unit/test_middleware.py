@@ -1,11 +1,10 @@
 import uuid
 
 import pytest
-from starlette.requests import Request
-from starlette.responses import JSONResponse
-
 from app.logging_setup import correlation_id_var
 from app.middleware import CorrelationIdMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 
 def _request(correlation_id: str | None = None) -> Request:

@@ -1,11 +1,9 @@
 import os
-from unittest.mock import AsyncMock
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from httpx import ASGITransport, AsyncClient, Response
-
 from app.config import Settings
+from httpx import ASGITransport, AsyncClient, Response
 
 
 def _mock_search_response(resources):
