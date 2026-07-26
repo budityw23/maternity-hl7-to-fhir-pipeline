@@ -39,11 +39,12 @@ def pytest_configure(config):  # type: ignore[no-untyped-def]
 
 
 def pytest_collection_modifyitems(config, items):  # type: ignore[no-untyped-def]
-    """Skip all E2E tests if the Docker stack is not running."""
+    """Skip E2E tests if the Docker stack is not running."""
     if not _check_stack_health():
         skip = pytest.mark.skip(reason="Docker stack not running (FastAPI health check failed)")
         for item in items:
-            item.add_marker(skip)
+            if "e2e" in item.keywords or "tests/e2e" in str(item.fspath):
+                item.add_marker(skip)
 
 
 def _mllp_send(hl7_path: str) -> str:
