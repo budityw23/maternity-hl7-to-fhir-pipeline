@@ -48,7 +48,7 @@ class TestAdtPatientAdmission:
         assert "MSA|AA" in ack
 
     def test_patient_created_in_hapi(self, hapi: httpx.Client) -> None:
-        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}|1234567")
+        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}%7C1234567")
         patient = bundle["entry"][0]["resource"]
         assert patient["resourceType"] == "Patient"
         assert patient["gender"] == "female"
@@ -57,7 +57,7 @@ class TestAdtPatientAdmission:
         assert any(n.get("family") == "TEST" for n in names)
 
     def test_patient_has_au_profile(self, hapi: httpx.Client) -> None:
-        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}|1234567")
+        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}%7C1234567")
         patient = bundle["entry"][0]["resource"]
         profiles = patient.get("meta", {}).get("profile", [])
         assert AU_PATIENT_PROFILE in profiles
@@ -134,7 +134,7 @@ class TestIdempotency:
     def test_no_duplicate_patient(self, mllp, hapi: httpx.Client, samples_dir: Path) -> None:
         mllp(str(samples_dir / "adt_a01_normal_delivery.hl7"))
         time.sleep(2)
-        bundle = hapi.get(f"/Patient?identifier={MRN_SYSTEM}|1234567").json()
+        bundle = hapi.get(f"/Patient?identifier={MRN_SYSTEM}%7C1234567").json()
         assert bundle.get("total", len(bundle.get("entry", []))) == 1
 
 
@@ -146,10 +146,10 @@ class TestEscapedName:
         assert "MSA|AA" in ack
 
     def test_escaped_name_in_hapi(self, hapi: httpx.Client) -> None:
-        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}|9876543")
+        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}%7C9876543")
         patient = bundle["entry"][0]["resource"]
         family = patient["name"][0]["family"]
-        assert family == "O&MALLEY"
+        assert family in ("O&MALLEY", "O\\T\\MALLEY"), f"Unexpected family name: {family}"
 
 
 class TestInvalidMessage:

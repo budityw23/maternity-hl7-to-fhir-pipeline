@@ -29,7 +29,7 @@ graph LR
             VALID["fhir.resources<br/>Pydantic Validation"]
         end
 
-        subgraph "HAPI FHIR v7.0.3 :8080"
+        subgraph "HAPI FHIR v7.0.3 :8081"
             FHIR[FHIR R4 REST API]
             DB[(H2 Database)]
         end
@@ -168,7 +168,7 @@ docker compose up -d --build
 Services will be available at:
 
 - **FastAPI**: http://localhost:8000
-- **HAPI FHIR**: http://localhost:8080/fhir
+- **HAPI FHIR**: http://localhost:8081/fhir
 - **Mirth Connect Admin**: https://localhost:8443
 - **MLLP Listener**: port `6661`
 
@@ -280,16 +280,16 @@ curl -s -X POST http://localhost:8000/fhir/Observation/bundle \
 
 ```bash
 # All patients
-curl -s http://localhost:8080/fhir/Patient | python -m json.tool
+curl -s http://localhost:8081/fhir/Patient | python -m json.tool
 
 # Patient by MRN
-curl -s "http://localhost:8080/fhir/Patient?identifier=http://hospital.local/mrn|1234567"
+curl -s "http://localhost:8081/fhir/Patient?identifier=http://hospital.local/mrn|1234567"
 
 # All observations for a patient
-curl -s "http://localhost:8080/fhir/Observation?patient=1"
+curl -s "http://localhost:8081/fhir/Observation?patient=1"
 
 # Blood pressure observations only
-curl -s "http://localhost:8080/fhir/Observation?code=85354-9"
+curl -s "http://localhost:8081/fhir/Observation?code=85354-9"
 ```
 
 ## API Endpoints

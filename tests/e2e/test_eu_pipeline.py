@@ -39,10 +39,10 @@ def _is_eu_mode(fastapi_http: httpx.Client) -> bool:
         )
         if r.status_code != 200:
             return False
-        hapi = httpx.Client(base_url="http://localhost:8080/fhir", timeout=10)
+        hapi = httpx.Client(base_url="http://localhost:8081/fhir", timeout=10)
         try:
             time.sleep(1)
-            bundle = hapi.get(f"/Patient?identifier={MRN_SYSTEM}|EU-PROBE-000").json()
+            bundle = hapi.get(f"/Patient?identifier={MRN_SYSTEM}%7CEU-PROBE-000").json()
             if not bundle.get("entry"):
                 return False
             patient = bundle["entry"][0]["resource"]
@@ -95,13 +95,13 @@ class TestEuPatient:
             headers={"X-Correlation-ID": "e2e-eu-001"},
         )
         assert r.status_code == 200
-        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}|MRN-E2E-EU")
+        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}%7CMRN-E2E-EU")
         patient = bundle["entry"][0]["resource"]
         profiles = patient.get("meta", {}).get("profile", [])
         assert EU_PATIENT_PROFILE in profiles
 
     def test_eu_national_id(self, hapi: httpx.Client) -> None:
-        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}|MRN-E2E-EU")
+        bundle = _wait_for_resource(hapi, f"/Patient?identifier={MRN_SYSTEM}%7CMRN-E2E-EU")
         patient = bundle["entry"][0]["resource"]
         identifiers = patient.get("identifier", [])
         nhs = [i for i in identifiers if i.get("system") == NHS_NUMBER_SYSTEM]

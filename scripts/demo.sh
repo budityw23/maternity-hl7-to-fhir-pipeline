@@ -6,7 +6,7 @@ set -euo pipefail
 # Recording: asciinema rec demo.cast -c "./scripts/demo.sh"
 
 API="http://localhost:8000"
-HAPI="http://localhost:8080/fhir"
+HAPI="http://localhost:8081/fhir"
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'

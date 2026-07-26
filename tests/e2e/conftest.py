@@ -13,7 +13,7 @@ sys.path.insert(0, str(REPO_ROOT / "scripts"))
 sys.path.insert(0, str(REPO_ROOT / "fastapi"))
 
 FASTAPI_URL = os.getenv("FASTAPI_URL", "http://localhost:8000")
-HAPI_URL = os.getenv("HAPI_URL", "http://localhost:8080/fhir")
+HAPI_URL = os.getenv("HAPI_URL", "http://localhost:8081/fhir")
 MLLP_HOST = os.getenv("MLLP_HOST", "localhost")
 MLLP_PORT = int(os.getenv("MLLP_PORT", "6661"))
 

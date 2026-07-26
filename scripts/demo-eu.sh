@@ -73,7 +73,7 @@ curl -s -X POST "$BASE_URL/fhir/Observation/bundle" \
 echo ""
 
 echo "--- Step 5: Verify Patient in HAPI FHIR ---"
-curl -s "http://localhost:8080/fhir/Patient?identifier=http://hospital.local/mrn|MRN-EU-001" | python3 -m json.tool
+curl -s "http://localhost:8081/fhir/Patient?identifier=http://hospital.local/mrn|MRN-EU-001" | python3 -m json.tool
 echo ""
 
 echo "--- Step 6: Generate International Patient Summary (IPS) ---"

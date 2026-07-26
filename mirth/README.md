@@ -62,7 +62,7 @@ select `channels/Maternity_Inbound.xml` → Deploy.
 python scripts/mllp_send.py samples/adt_a01_normal_delivery.hl7    # expect MSA|AA ACK
 python scripts/mllp_send.py samples/orm_o01_antenatal_28w.hl7
 python scripts/mllp_send.py samples/oru_r01_vitals.hl7
-curl "http://localhost:8080/fhir/Patient?identifier=http://hospital.local/mrn|1234567"
+curl "http://localhost:8081/fhir/Patient?identifier=http://hospital.local/mrn|1234567"
 ```
 
 The source connector ACKs after **destinations complete** (`Auto-generate (Destinations completed)`),
@@ -83,7 +83,7 @@ python scripts/mllp_send.py samples/invalid/adt_missing_mrn.hl7   # MSA|AE + dea
 
 ```bash
 python scripts/mllp_send.py samples/adt_a01_escaped_name.hl7    # expect MSA|AA
-curl -s "http://localhost:8080/fhir/Patient?identifier=http://hospital.local/mrn|9876543" | python3 -m json.tool
+curl -s "http://localhost:8081/fhir/Patient?identifier=http://hospital.local/mrn|9876543" | python3 -m json.tool
 # Verify: family name = "O&MALLEY", address line = "45 SMITH & JONES ST"
 ```
 
