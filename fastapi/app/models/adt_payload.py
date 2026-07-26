@@ -14,7 +14,7 @@ class AddressPayload(BaseModel):
     city: str
     state: str
     postalCode: str
-    country: str = "AU"
+    country: str = ""
 
 
 class DiagnosisPayload(BaseModel):

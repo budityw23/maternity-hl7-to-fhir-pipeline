@@ -249,20 +249,22 @@ function mgText(node) {
     return current.toString();
 }
 
-/** Australian country normalisation: HL7 samples use &quot;AUS&quot;; FHIR/AU Base wants &quot;AU&quot;. */
+/** Country normalisation: HL7 &quot;AUS&quot; -&gt; ISO &quot;AU&quot;; empty passes through for FastAPI profile default. */
 function mgCountry(code) {
-    return (code === &apos;&apos; || code === &apos;AUS&apos; || code === &apos;AU&apos;) ? &apos;AU&apos; : code;
+    if (code === &apos;AUS&apos;) return &apos;AU&apos;;
+    return code;
 }
 
-/** Pull MRN (identifier type MR) and IHI (type NI) from the repeating PID-3 field. */
+/** Pull MRN (identifier type MR) and national ID (NI/NH/PN/SS) from the repeating PID-3 field. */
 function mgMrnAndIhi(pid) {
     var out = { mrn: &apos;&apos;, ihi: &apos;&apos; };
+    var nationalTypes = [&apos;NI&apos;, &apos;NH&apos;, &apos;PN&apos;, &apos;SS&apos;];
     for each (var rep in pid[&apos;PID.3&apos;]) {
         var idType = mgText(rep[&apos;PID.3.5&apos;]);
         var idVal = mgText(rep[&apos;PID.3.1&apos;]);
         if (idType === &apos;MR&apos; &amp;&amp; out.mrn === &apos;&apos;) {
             out.mrn = idVal;
-        } else if (idType === &apos;NI&apos; &amp;&amp; out.ihi === &apos;&apos;) {
+        } else if (nationalTypes.indexOf(idType) !== -1 &amp;&amp; out.ihi === &apos;&apos;) {
             out.ihi = idVal;
         }
     }

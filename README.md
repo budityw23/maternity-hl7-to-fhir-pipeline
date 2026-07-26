@@ -60,6 +60,37 @@ graph LR
     style DB fill:#fce4ec
 ```
 
+## Multi-Jurisdiction Support
+
+The pipeline supports both Australian (AU Base) and European (EU Base/Core) FHIR profiles, controlled by environment variables:
+
+```bash
+# Australian mode (default)
+docker compose up --build
+
+# European mode (UK identifiers)
+PROFILE_REGION=eu PROFILE_COUNTRY=uk docker compose up --build
+```
+
+### Supported Regions
+
+| Region | `PROFILE_REGION` | Profile Basis | National ID |
+|---|---|---|---|
+| Australia | `au` (default) | AU Base 4.x | IHI |
+| UK | `eu` + `PROFILE_COUNTRY=uk` | HL7 EU Base/Core | NHS Number |
+| Netherlands | `eu` + `PROFILE_COUNTRY=nl` | HL7 EU Base/Core | BSN |
+| Germany | `eu` + `PROFILE_COUNTRY=de` | HL7 EU Base/Core | KVNR |
+| Ireland | `eu` + `PROFILE_COUNTRY=ie` | HL7 EU Base/Core | PPS Number |
+
+### Additional EU Endpoints
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/fhir/IPS` | Generate International Patient Summary Bundle |
+| POST | `/fhir/Consent` | Create GDPR Consent resource (EU only) |
+
+See `AU-CONTEXT.md` and `EU-CONTEXT.md` for jurisdiction-specific healthcare standards details.
+
 ## Data Flow
 
 ```text
@@ -263,6 +294,8 @@ curl -s "http://localhost:8080/fhir/Observation?code=85354-9"
 | `POST` | `/fhir/Patient` | ADT flat JSON -> Patient + Condition(s) |
 | `POST` | `/fhir/Encounter` | ORM flat JSON -> Encounter |
 | `POST` | `/fhir/Observation/bundle` | ORU observations -> Observation(s) with BP merge |
+| `POST` | `/fhir/IPS` | Generate International Patient Summary Bundle |
+| `POST` | `/fhir/Consent` | Create GDPR Consent resource (EU only) |
 | `POST` | `/fhir/validate/{resource_type}` | Validate a FHIR resource via HAPI `$validate` |
 
 ## Error Handling
@@ -295,7 +328,7 @@ cd fastapi && ruff check app/
 cd fastapi && mypy app/ --ignore-missing-imports
 ```
 
-**Coverage**: 177 tests and 90% line coverage.
+**Coverage**: 247 tests and 90% line coverage.
 
 ## Project Structure
 
@@ -346,8 +379,8 @@ maternity-hl7-to-fhir/
 |   |-- reset.sh                    # Full reset
 |   `-- demo.sh                     # Walkthrough demo
 |-- tests/
-|   |-- unit/                       # 157 unit tests
-|   `-- integration/                # 20 integration tests
+|   |-- unit/                       # 216 unit tests
+|   `-- integration/                # 31 integration tests
 |-- deadletter/                     # Failed message store (gitignored)
 |-- logs/                           # Runtime logs (gitignored)
 `-- .github/workflows/ci.yml        # CI: lint + type check + test

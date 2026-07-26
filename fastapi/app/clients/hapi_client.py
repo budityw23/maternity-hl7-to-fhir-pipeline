@@ -4,6 +4,7 @@ from typing import Any, cast
 import httpx
 
 from app.config import settings
+from app.profiles.base import ProfileConfig
 
 logger = logging.getLogger(__name__)
 
@@ -119,106 +120,34 @@ class HapiClient:
 
         return None
 
-    async def ensure_au_patient_profile(self) -> None:
-        """Seed a minimal AU Patient profile placeholder for demo validation."""
-        profile_id = "au-patient"
-        profile_url = "http://hl7.org.au/fhir/StructureDefinition/au-patient"
-        resource = {
-            "resourceType": "StructureDefinition",
-            "id": profile_id,
-            "url": profile_url,
-            "name": "AUPatient",
-            "status": "active",
-            "kind": "resource",
-            "abstract": False,
-            "type": "Patient",
-            "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
-            "derivation": "constraint",
-            "differential": {"element": [{"id": "Patient", "path": "Patient"}]},
-        }
-        response = await self._client.put(
-            f"{self._base}/StructureDefinition/{profile_id}",
-            json=resource,
-            headers={"Content-Type": "application/fhir+json"},
-        )
-        if response.status_code not in (200, 201):
-            logger.error("HAPI profile seed failed: %s %s", response.status_code, response.text)
-            response.raise_for_status()
-
-    async def ensure_au_condition_profile(self) -> None:
-        """Seed a minimal AU Condition profile placeholder."""
-        profile_id = "au-condition"
-        profile_url = "http://hl7.org.au/fhir/StructureDefinition/au-condition"
-        resource = {
-            "resourceType": "StructureDefinition",
-            "id": profile_id,
-            "url": profile_url,
-            "name": "AUCondition",
-            "status": "active",
-            "kind": "resource",
-            "abstract": False,
-            "type": "Condition",
-            "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Condition",
-            "derivation": "constraint",
-            "differential": {"element": [{"id": "Condition", "path": "Condition"}]},
-        }
-        response = await self._client.put(
-            f"{self._base}/StructureDefinition/{profile_id}",
-            json=resource,
-            headers={"Content-Type": "application/fhir+json"},
-        )
-        if response.status_code not in (200, 201):
-            logger.error("HAPI Condition profile seed failed: %s %s", response.status_code, response.text)
-            response.raise_for_status()
-
-    async def ensure_au_encounter_profile(self) -> None:
-        """Seed a minimal AU Encounter profile placeholder."""
-        profile_id = "au-encounter"
-        profile_url = "http://hl7.org.au/fhir/StructureDefinition/au-encounter"
-        resource = {
-            "resourceType": "StructureDefinition",
-            "id": profile_id,
-            "url": profile_url,
-            "name": "AUEncounter",
-            "status": "active",
-            "kind": "resource",
-            "abstract": False,
-            "type": "Encounter",
-            "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Encounter",
-            "derivation": "constraint",
-            "differential": {"element": [{"id": "Encounter", "path": "Encounter"}]},
-        }
-        response = await self._client.put(
-            f"{self._base}/StructureDefinition/{profile_id}",
-            json=resource,
-            headers={"Content-Type": "application/fhir+json"},
-        )
-        if response.status_code not in (200, 201):
-            logger.error("HAPI Encounter profile seed failed: %s %s", response.status_code, response.text)
-            response.raise_for_status()
-
-    async def ensure_au_bp_profile(self) -> None:
-        """Seed a minimal AU BP Observation profile placeholder for demo validation."""
-        profile_id = "au-vitalsigns-bloodpressure"
-        profile_url = "http://hl7.org.au/fhir/StructureDefinition/au-vitalsigns-bloodpressure"
-        resource = {
-            "resourceType": "StructureDefinition",
-            "id": profile_id,
-            "url": profile_url,
-            "name": "AUVitalSignsBloodPressure",
-            "status": "active",
-            "kind": "resource",
-            "abstract": False,
-            "type": "Observation",
-            "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Observation",
-            "derivation": "constraint",
-            "differential": {"element": [{"id": "Observation", "path": "Observation"}]},
-        }
-        response = await self._client.put(
-            f"{self._base}/StructureDefinition/{profile_id}",
-            json=resource,
-            headers={"Content-Type": "application/fhir+json"},
-        )
-        if response.status_code not in (200, 201):
-            logger.error("HAPI BP profile seed failed: %s %s", response.status_code, response.text)
-            response.raise_for_status()
+    async def ensure_profiles(self, profile: ProfileConfig) -> None:
+        """Seed minimal StructureDefinition placeholders for the active profile."""
+        for defn in profile.profile_definitions:
+            resource = {
+                "resourceType": "StructureDefinition",
+                "id": defn["id"],
+                "url": defn["url"],
+                "name": defn["name"],
+                "status": "active",
+                "kind": "resource",
+                "abstract": False,
+                "type": defn["type"],
+                "baseDefinition": f"http://hl7.org/fhir/StructureDefinition/{defn['type']}",
+                "derivation": "constraint",
+                "differential": {
+                    "element": [{"id": defn["type"], "path": defn["type"]}]
+                },
+            }
+            response = await self._client.put(
+                f"{self._base}/StructureDefinition/{defn['id']}",
+                json=resource,
+                headers={"Content-Type": "application/fhir+json"},
+            )
+            if response.status_code not in (200, 201):
+                logger.error(
+                    "HAPI profile seed failed for %s: %s %s",
+                    defn["id"],
+                    response.status_code,
+                    response.text,
+                )
+                response.raise_for_status()

@@ -9,6 +9,13 @@ on:
 jobs:
   lint-and-test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile_region: [au, eu]
+    env:
+      PROFILE_REGION: ${{ matrix.profile_region }}
+      PROFILE_COUNTRY: ${{ matrix.profile_region == 'eu' && 'uk' || '' }}
 
     steps:
       - uses: actions/checkout@v4

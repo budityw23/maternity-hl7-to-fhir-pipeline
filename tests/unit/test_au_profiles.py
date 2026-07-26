@@ -8,11 +8,11 @@ from app.models.adt_payload import (
 )
 from app.models.orm_payload import LocationPayload, OrmPayload, ParticipantPayload
 from app.models.oru_payload import ObservationPayload
-from app.transformers.condition import AU_CONDITION_PROFILE, build_condition
-from app.transformers.encounter import AU_ENCOUNTER_PROFILE, build_encounter
+from app.profiles.au_profile import AU_PROFILE
+from app.transformers.condition import build_condition
+from app.transformers.encounter import build_encounter
 from app.transformers.observation import _build_bp_panel_observation, _build_single_observation
-from app.transformers.patient import AU_PATIENT_PROFILE, build_patient
-from app.valuesets.hl7_to_fhir_observation import AU_BP_PROFILE
+from app.transformers.patient import build_patient
 
 
 class TestPatientProfile:
@@ -29,15 +29,15 @@ class TestPatientProfile:
         )
 
     def test_patient_has_au_profile(self) -> None:
-        patient = build_patient(self._payload())
-        assert AU_PATIENT_PROFILE in patient.meta.profile
+        patient = build_patient(self._payload(), AU_PROFILE)
+        assert AU_PROFILE.patient_profile_url in patient.meta.profile
 
 
 class TestConditionProfile:
     def test_condition_has_au_profile(self) -> None:
         diagnosis = DiagnosisPayload(code="O80", display="Normal delivery")
-        condition = build_condition(diagnosis, "Patient/1")
-        assert AU_CONDITION_PROFILE in condition.meta.profile
+        condition = build_condition(diagnosis, "Patient/1", AU_PROFILE)
+        assert AU_PROFILE.condition_profile_url in condition.meta.profile
 
 
 class TestEncounterProfile:
@@ -55,8 +55,8 @@ class TestEncounterProfile:
         )
 
     def test_encounter_has_au_profile(self) -> None:
-        encounter = build_encounter(self._payload(), "Patient/1")
-        assert AU_ENCOUNTER_PROFILE in encounter.meta.profile
+        encounter = build_encounter(self._payload(), "Patient/1", AU_PROFILE)
+        assert AU_PROFILE.encounter_profile_url in encounter.meta.profile
 
 
 class TestObservationProfiles:
@@ -66,11 +66,11 @@ class TestObservationProfiles:
         )
 
     def test_single_observation_no_special_profile(self) -> None:
-        obs = _build_single_observation(self._obs(), "Patient/1", None)
+        obs = _build_single_observation(self._obs(), "Patient/1", None, AU_PROFILE)
         assert obs.meta is None or not getattr(obs.meta, "profile", None)
 
     def test_bp_panel_has_au_bp_profile(self) -> None:
         sys_obs = self._obs("8480-6", "Systolic")
         dia_obs = self._obs("8462-4", "Diastolic")
-        obs = _build_bp_panel_observation(sys_obs, dia_obs, "Patient/1", None)
-        assert AU_BP_PROFILE in obs.meta.profile
+        obs = _build_bp_panel_observation(sys_obs, dia_obs, "Patient/1", None, AU_PROFILE)
+        assert AU_PROFILE.bp_observation_profile_url in obs.meta.profile

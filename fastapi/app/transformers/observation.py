@@ -9,8 +9,8 @@ from fhir.resources.R4B.quantity import Quantity
 from fhir.resources.R4B.reference import Reference
 
 from app.models.oru_payload import ObservationPayload, OruPayload
+from app.profiles.base import ProfileConfig
 from app.valuesets.hl7_to_fhir_observation import (
-    AU_BP_PROFILE,
     BP_DIASTOLIC_CODE,
     BP_PANEL_CODE,
     BP_PANEL_DISPLAY,
@@ -23,11 +23,14 @@ from app.valuesets.hl7_to_fhir_observation import (
 )
 
 
-def _hl7_datetime_to_iso(hl7_dt: str) -> str:
-    """Convert HL7 datetime YYYYMMDDHHMMSS to ISO 8601 with AEST offset."""
+def _hl7_datetime_to_iso(hl7_dt: str, timezone_offset: str) -> str:
+    """Convert HL7 datetime YYYYMMDDHHMMSS to ISO 8601 with configurable offset."""
     cleaned = re.sub(r"[^0-9]", "", hl7_dt)
     if len(cleaned) >= 14:
-        return f"{cleaned[:4]}-{cleaned[4:6]}-{cleaned[6:8]}T{cleaned[8:10]}:{cleaned[10:12]}:{cleaned[12:14]}+10:00"
+        return (
+            f"{cleaned[:4]}-{cleaned[4:6]}-{cleaned[6:8]}"
+            f"T{cleaned[8:10]}:{cleaned[10:12]}:{cleaned[12:14]}{timezone_offset}"
+        )
     if len(cleaned) >= 8:
         return f"{cleaned[:4]}-{cleaned[4:6]}-{cleaned[6:8]}"
     return hl7_dt
@@ -37,6 +40,7 @@ def _build_single_observation(
     obs: ObservationPayload,
     patient_reference: str,
     encounter_reference: str | None,
+    profile: ProfileConfig,
 ) -> Observation:
     """Build a FHIR Observation from a single OBX segment."""
     category = [
@@ -75,7 +79,7 @@ def _build_single_observation(
 
     effective_dt = None
     if obs.observationDatetime:
-        effective_dt = _hl7_datetime_to_iso(obs.observationDatetime)
+        effective_dt = _hl7_datetime_to_iso(obs.observationDatetime, profile.timezone_offset)
 
     observation = Observation(
         text=Narrative(
@@ -101,6 +105,7 @@ def _build_bp_panel_observation(
     diastolic: ObservationPayload,
     patient_reference: str,
     encounter_reference: str | None,
+    profile: ProfileConfig,
 ) -> Observation:
     """Build a BP panel Observation from paired systolic + diastolic OBX segments."""
     category = [
@@ -139,7 +144,7 @@ def _build_bp_panel_observation(
     components = [_make_component(systolic), _make_component(diastolic)]
 
     effective_src = systolic.observationDatetime or diastolic.observationDatetime
-    effective_dt = _hl7_datetime_to_iso(effective_src) if effective_src else None
+    effective_dt = _hl7_datetime_to_iso(effective_src, profile.timezone_offset) if effective_src else None
 
     status_priority = {"preliminary": 0, "registered": 1, "final": 2, "corrected": 3}
     sys_status = map_observation_status(systolic.status)
@@ -163,7 +168,7 @@ def _build_bp_panel_observation(
         encounter_ref = Reference(reference=encounter_reference)
 
     observation = Observation(
-        meta=Meta(profile=[AU_BP_PROFILE]),
+        meta=Meta(profile=[profile.bp_observation_profile_url]),
         text=Narrative(
             status="generated",
             div='<div xmlns="http://www.w3.org/1999/xhtml">Blood pressure panel</div>',
@@ -184,7 +189,8 @@ def _build_bp_panel_observation(
 def build_observations(
     payload: OruPayload,
     patient_reference: str,
-    encounter_reference: str | None = None,
+    encounter_reference: str | None,
+    profile: ProfileConfig,
 ) -> list[Observation]:
     """Build Observation resources from ORU payload.
 
@@ -203,24 +209,24 @@ def build_observations(
             bp_diastolic = obs
         else:
             observations.append(
-                _build_single_observation(obs, patient_reference, encounter_reference)
+                _build_single_observation(obs, patient_reference, encounter_reference, profile)
             )
 
     if bp_systolic and bp_diastolic:
         observations.insert(
             0,
             _build_bp_panel_observation(
-                bp_systolic, bp_diastolic, patient_reference, encounter_reference
+                bp_systolic, bp_diastolic, patient_reference, encounter_reference, profile
             ),
         )
     else:
         if bp_systolic:
             observations.append(
-                _build_single_observation(bp_systolic, patient_reference, encounter_reference)
+                _build_single_observation(bp_systolic, patient_reference, encounter_reference, profile)
             )
         if bp_diastolic:
             observations.append(
-                _build_single_observation(bp_diastolic, patient_reference, encounter_reference)
+                _build_single_observation(bp_diastolic, patient_reference, encounter_reference, profile)
             )
 
     return observations

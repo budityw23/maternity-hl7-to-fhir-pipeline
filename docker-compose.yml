@@ -43,8 +43,9 @@ services:
       HAPI_BASE_URL: http://hapi:8080/fhir
       LOG_LEVEL: INFO
       MRN_SYSTEM: http://hospital.local/mrn
-      IHI_SYSTEM: http://ns.electronichealth.net.au/id/hi/ihi/1.0
       VALIDATE_BEFORE_PERSIST: "false"
+      PROFILE_REGION: ${PROFILE_REGION:-au}
+      PROFILE_COUNTRY: ${PROFILE_COUNTRY:-}
     volumes:
       - ./logs/fastapi:/app/logs
       - ./deadletter:/app/deadletter

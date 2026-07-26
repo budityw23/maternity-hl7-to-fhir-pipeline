@@ -9,9 +9,9 @@ from fhir.resources.patient import Patient
 
 from app.config import settings
 from app.models.adt_payload import AdtPayload
+from app.profiles.base import ProfileConfig
 from app.valuesets.hl7_to_fhir_gender import map_gender
 
-AU_PATIENT_PROFILE = "http://hl7.org.au/fhir/StructureDefinition/au-patient"
 MR_TYPE_CODING = {
     "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
     "code": "MR",
@@ -26,7 +26,7 @@ def _hl7_date_to_iso(hl7_date: str) -> str:
     return hl7_date
 
 
-def build_patient(payload: AdtPayload) -> Patient:
+def build_patient(payload: AdtPayload, profile: ProfileConfig) -> Patient:
     identifiers = [
         Identifier(
             system=settings.mrn_system,
@@ -36,7 +36,9 @@ def build_patient(payload: AdtPayload) -> Patient:
     ]
 
     if payload.ihi:
-        identifiers.append(Identifier(system=settings.ihi_system, value=payload.ihi))
+        identifiers.append(
+            Identifier(system=profile.national_id_system, value=payload.ihi)
+        )
 
     given_names = [payload.name.given]
     if payload.name.middle:
@@ -49,21 +51,23 @@ def build_patient(payload: AdtPayload) -> Patient:
         prefix=[payload.name.prefix] if payload.name.prefix else None,
     )
 
-    address = Address(
-        use="home",
-        line=[payload.address.line],
-        city=payload.address.city,
-        state=payload.address.state,
-        postalCode=payload.address.postalCode,
-        country=payload.address.country or "AU",
-    )
+    address_kwargs: dict[str, object] = {
+        "use": "home",
+        "line": [payload.address.line],
+        "city": payload.address.city,
+        "postalCode": payload.address.postalCode,
+        "country": payload.address.country or profile.default_country,
+    }
+    if payload.address.state:
+        address_kwargs["state"] = payload.address.state
+    address = Address(**address_kwargs)
 
     telecom = None
     if payload.phone:
         telecom = [ContactPoint(system="phone", use="mobile", value=payload.phone)]
 
     patient = Patient(
-        meta={"profile": [AU_PATIENT_PROFILE]},
+        meta={"profile": [profile.patient_profile_url]},
         text=Narrative(
             status="generated",
             div=f"<div xmlns=\"http://www.w3.org/1999/xhtml\">Patient MRN {payload.mrn}</div>",

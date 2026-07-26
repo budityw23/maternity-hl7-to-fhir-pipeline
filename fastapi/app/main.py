@@ -8,6 +8,7 @@ import httpx
 from fastapi import FastAPI, HTTPException
 
 from app.clients.encounter_resolver import resolve_encounter_id
+from app.clients.fhir_query import get_patient_resources
 from app.clients.hapi_client import HapiClient
 from app.clients.patient_resolver import resolve_patient_id
 from app.config import settings
@@ -15,10 +16,15 @@ from app.errors import problem_response, register_error_handlers, write_deadlett
 from app.logging_setup import setup_logging
 from app.middleware import CorrelationIdMiddleware
 from app.models.adt_payload import AdtPayload
+from app.models.consent_payload import ConsentPayload
+from app.models.ips_payload import IpsPayload
 from app.models.orm_payload import OrmPayload
 from app.models.oru_payload import OruPayload
+from app.profiles.registry import get_profile
 from app.transformers.condition import build_conditions
+from app.transformers.consent import build_consent
 from app.transformers.encounter import VISIT_NUMBER_SYSTEM, build_encounter
+from app.transformers.ips_composition import build_ips_bundle
 from app.transformers.observation import build_observations
 from app.transformers.patient import build_patient
 
@@ -34,8 +40,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(
     title="Maternity FHIR Converter",
-    description="HL7 v2 to FHIR R4 transformation service for Australian maternity care",
-    version="0.1.0",
+    description="HL7 v2 to FHIR R4 transformation service for Australian and European maternity care",
+    version="0.2.0",
     lifespan=lifespan,
 )
 register_error_handlers(app)
@@ -134,7 +140,7 @@ async def _validate_if_enabled(
         )
         raise HTTPException(
             status_code=422,
-            detail=f"{resource_type} failed AU profile validation: {'; '.join(error_messages)}",
+            detail=f"{resource_type} failed profile validation: {'; '.join(error_messages)}",
         )
 
 
@@ -148,12 +154,12 @@ async def transform_patient(payload: AdtPayload) -> Any:
     )
 
     try:
-        patient = build_patient(payload)
+        profile = get_profile()
+        patient = build_patient(payload, profile)
         patient_data = _resource_to_json(patient)
 
         hapi = HapiClient(app.state.http_client)
-        await hapi.ensure_au_patient_profile()
-        await hapi.ensure_au_condition_profile()
+        await hapi.ensure_profiles(profile)
         await _validate_if_enabled(hapi, "Patient", patient_data, payload.correlationId)
         identifier_query = f"{settings.mrn_system}|{payload.mrn}"
         patient_id = await hapi.upsert_resource("Patient", patient_data, identifier_query)
@@ -167,7 +173,7 @@ async def transform_patient(payload: AdtPayload) -> Any:
         condition_ids: list[str] = []
         if payload.diagnoses:
             patient_reference = f"Patient/{patient_id}"
-            conditions = build_conditions(payload, patient_reference)
+            conditions = build_conditions(payload, patient_reference, profile)
             for condition in conditions:
                 condition_data = _resource_to_json(condition)
                 await _validate_if_enabled(hapi, "Condition", condition_data, payload.correlationId)
@@ -206,12 +212,13 @@ async def transform_encounter(payload: OrmPayload) -> Any:
                 detail=f"Patient not found for MRN={payload.mrn}. Send ADT^A01 first.",
             )
 
+        profile = get_profile()
         patient_reference = f"Patient/{patient_id}"
-        encounter = build_encounter(payload, patient_reference)
+        encounter = build_encounter(payload, patient_reference, profile)
         encounter_data = _resource_to_json(encounter)
 
         hapi = HapiClient(app.state.http_client)
-        await hapi.ensure_au_encounter_profile()
+        await hapi.ensure_profiles(profile)
         await _validate_if_enabled(hapi, "Encounter", encounter_data, payload.correlationId)
         identifier_query = f"{VISIT_NUMBER_SYSTEM}|{payload.visitNumber}"
         encounter_id = await hapi.upsert_resource("Encounter", encounter_data, identifier_query)
@@ -257,12 +264,13 @@ async def transform_observations(payload: OruPayload) -> Any:
             if encounter_id:
                 encounter_reference = f"Encounter/{encounter_id}"
 
+        profile = get_profile()
         observations = build_observations(
-            payload, patient_reference, encounter_reference
+            payload, patient_reference, encounter_reference, profile
         )
 
         hapi = HapiClient(app.state.http_client)
-        await hapi.ensure_au_bp_profile()
+        await hapi.ensure_profiles(profile)
         observation_ids: list[str] = []
         for obs in observations:
             obs_data = _resource_to_json(obs)
@@ -301,3 +309,98 @@ async def validate_resource(resource_type: str, payload: dict[str, Any]) -> Any:
         return response.json()
     except httpx.HTTPError as exc:
         return _hapi_problem(exc, "validate", payload)
+
+
+@app.post("/fhir/IPS")
+async def generate_ips(payload: IpsPayload) -> Any:
+    logger = logging.getLogger("app.fhir.ips")
+    logger.info(
+        "Generating IPS for MRN=%s correlationId=%s",
+        payload.mrn,
+        payload.correlationId,
+    )
+
+    try:
+        patient_id = await resolve_patient_id(app.state.http_client, payload.mrn)
+        if not patient_id:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Patient not found for MRN={payload.mrn}. Send ADT^A01 first.",
+            )
+
+        resources = await get_patient_resources(app.state.http_client, patient_id)
+
+        if not resources.get("patient"):
+            raise HTTPException(
+                status_code=404,
+                detail=f"Patient resource not found for id={patient_id}",
+            )
+
+        ips_bundle = build_ips_bundle(
+            patient=resources["patient"][0],
+            conditions=resources.get("conditions", []),
+            observations=resources.get("observations", []),
+            encounters=resources.get("encounters", []),
+        )
+
+        logger.info(
+            "IPS generated for MRN=%s entries=%d correlationId=%s",
+            payload.mrn,
+            len(ips_bundle.get("entry", [])),
+            payload.correlationId,
+        )
+
+        return ips_bundle
+    except httpx.HTTPError as exc:
+        return _hapi_problem(exc, payload.correlationId, payload)
+
+
+@app.post("/fhir/Consent")
+async def create_consent(payload: ConsentPayload) -> Any:
+    logger = logging.getLogger("app.fhir.consent")
+
+    profile = get_profile()
+    if profile.region != "eu":
+        raise HTTPException(
+            status_code=404,
+            detail="Consent endpoint is only available in EU profile mode (PROFILE_REGION=eu).",
+        )
+
+    logger.info(
+        "Creating GDPR Consent for MRN=%s correlationId=%s",
+        payload.mrn,
+        payload.correlationId,
+    )
+
+    try:
+        patient_id = await resolve_patient_id(app.state.http_client, payload.mrn)
+        if not patient_id:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Patient not found for MRN={payload.mrn}. Send ADT^A01 first.",
+            )
+
+        patient_reference = f"Patient/{patient_id}"
+        consent_data = build_consent(
+            patient_reference=patient_reference,
+            policy_rule=payload.policyRule,
+            provision_type=payload.provisionType,
+            period_start=payload.periodStart,
+            period_end=payload.periodEnd,
+        )
+
+        hapi = HapiClient(app.state.http_client)
+        consent_id = await hapi.create_resource("Consent", consent_data)
+
+        logger.info(
+            "Consent persisted id=%s correlationId=%s",
+            consent_id,
+            payload.correlationId,
+        )
+
+        return {
+            "consentId": consent_id,
+            "correlationId": payload.correlationId,
+        }
+    except httpx.HTTPError as exc:
+        return _hapi_problem(exc, payload.correlationId, payload)

@@ -25,12 +25,12 @@ echo -e "${BLUE}|  SYNTHETIC DATA ONLY - Not for clinical use          |${NC}"
 echo -e "${BLUE}+------------------------------------------------------+${NC}"
 echo ""
 
-echo -e "${YELLOW}[0/4] Health Check${NC}"
+echo -e "${YELLOW}[0/5] Health Check${NC}"
 echo "curl $API/health"
 curl -s "$API/health" | python3 -m json.tool
 pause
 
-echo -e "${YELLOW}[1/4] Admitting Patient - ADT^A01 -> Patient + Condition${NC}"
+echo -e "${YELLOW}[1/5] Admitting Patient - ADT^A01 -> Patient + Condition${NC}"
 echo "Message: samples/adt_a01_normal_delivery.hl7"
 echo ""
 curl -s -X POST "$API/fhir/Patient" \
@@ -52,7 +52,7 @@ echo ""
 echo -e "${GREEN}Patient + Condition created in HAPI FHIR${NC}"
 pause
 
-echo -e "${YELLOW}[2/4] Placing Order - ORM^O01 -> Encounter${NC}"
+echo -e "${YELLOW}[2/5] Placing Order - ORM^O01 -> Encounter${NC}"
 echo "Message: samples/orm_o01_antenatal_28w.hl7"
 echo ""
 curl -s -X POST "$API/fhir/Encounter" \
@@ -75,7 +75,7 @@ echo ""
 echo -e "${GREEN}Encounter created in HAPI FHIR${NC}"
 pause
 
-echo -e "${YELLOW}[3/4] Sending Observations - ORU^R01 -> Observations with BP panel merge${NC}"
+echo -e "${YELLOW}[3/5] Sending Observations - ORU^R01 -> Observations with BP panel merge${NC}"
 echo "Message: samples/oru_r01_vitals.hl7"
 echo "BP panel: systolic 8480-6 + diastolic 8462-4 -> merged panel 85354-9"
 echo ""
@@ -98,7 +98,21 @@ echo ""
 echo -e "${GREEN}3 Observations created: 1 BP panel + 2 individual observations${NC}"
 pause
 
-echo -e "${YELLOW}[4/4] Verifying Resources in HAPI FHIR${NC}"
+echo -e "${YELLOW}[4/5] Generating International Patient Summary (IPS)${NC}"
+echo "Composing IPS document bundle from persisted resources"
+echo ""
+curl -s -X POST "$API/fhir/IPS" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-ID: demo-ips-001" \
+  -d '{
+    "correlationId": "demo-ips-001",
+    "mrn": "1234567"
+  }' | python3 -m json.tool
+echo ""
+echo -e "${GREEN}IPS document bundle generated${NC}"
+pause
+
+echo -e "${YELLOW}[5/5] Verifying Resources in HAPI FHIR${NC}"
 echo ""
 
 echo -e "${BLUE}Patient:${NC}"

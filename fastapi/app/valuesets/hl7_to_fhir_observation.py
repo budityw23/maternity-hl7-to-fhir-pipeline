@@ -46,4 +46,3 @@ BP_DIASTOLIC_CODE = "8462-4"
 BP_PANEL_CODE = "85354-9"
 BP_PANEL_DISPLAY = "Blood pressure panel"
 BP_CODES = {BP_SYSTOLIC_CODE, BP_DIASTOLIC_CODE}
-AU_BP_PROFILE = "http://hl7.org.au/fhir/StructureDefinition/au-vitalsigns-bloodpressure"

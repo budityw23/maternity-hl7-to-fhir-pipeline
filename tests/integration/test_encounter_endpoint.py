@@ -6,7 +6,7 @@ from app.main import app
 
 
 def _hapi_mock_with_patient():
-    mock = respx.mock(base_url="http://localhost:8080/fhir")
+    mock = respx.mock(base_url="http://localhost:8080/fhir", assert_all_called=False)
     mock.get("/Patient").mock(
         return_value=Response(
             200,
@@ -17,9 +17,44 @@ def _hapi_mock_with_patient():
             },
         )
     )
+    mock.put("/StructureDefinition/patient-eu").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "patient-eu"}
+        )
+    )
+    mock.put("/StructureDefinition/condition-eu-core").mock(
+        return_value=Response(
+            200,
+            json={"resourceType": "StructureDefinition", "id": "condition-eu-core"},
+        )
+    )
+    mock.put("/StructureDefinition/fhir-bp").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "fhir-bp"}
+        )
+    )
     mock.put("/StructureDefinition/au-encounter").mock(
         return_value=Response(
             200, json={"resourceType": "StructureDefinition", "id": "au-encounter"}
+        )
+    )
+    mock.put("/StructureDefinition/au-patient").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "au-patient"}
+        )
+    )
+    mock.put("/StructureDefinition/au-condition").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "au-condition"}
+        )
+    )
+    mock.put("/StructureDefinition/au-vitalsigns-bloodpressure").mock(
+        return_value=Response(
+            200,
+            json={
+                "resourceType": "StructureDefinition",
+                "id": "au-vitalsigns-bloodpressure",
+            },
         )
     )
     mock.put("/Encounter").mock(

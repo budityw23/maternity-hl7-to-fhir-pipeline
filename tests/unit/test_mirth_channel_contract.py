@@ -73,7 +73,9 @@ def _message_type(segments: list[list[str]]) -> str:
 
 
 def _map_country(code: str) -> str:
-    return "AU" if code in ("", "AUS", "AU") else code
+    if code == "AUS":
+        return "AU"
+    return code
 
 
 # --------------------------------------------------------------------------- #
@@ -84,11 +86,12 @@ def _map_country(code: str) -> str:
 def build_patient_payload(segments: list[list[str]], correlation_id: str) -> dict:
     pid = _first_segment(segments, "PID")
     mrn = ihi = ""
+    national_types = {"NI", "NH", "PN", "SS"}
     for rep in _reps(_field(pid, 3)):
         id_type = _comp(rep, 5)
         if id_type == "MR" and not mrn:
             mrn = _comp(rep, 1)
-        elif id_type == "NI" and not ihi:
+        elif id_type in national_types and not ihi:
             ihi = _comp(rep, 1)
 
     name = _field(pid, 5)
@@ -314,3 +317,83 @@ def test_invalid_adt_missing_mrn_is_rejected_by_contract() -> None:
     assert payload["mrn"] == ""
     with pytest.raises(ValidationError):
         AdtPayload.model_validate(payload)
+
+
+EU_SAMPLES = Path(__file__).resolve().parents[2] / "samples" / "eu"
+
+
+def _load_eu(name: str) -> list[list[str]]:
+    return _split_message((EU_SAMPLES / name).read_text(encoding="utf-8"))
+
+
+class TestEuAdtContract:
+    def test_eu_adt_maps_to_valid_patient_payload(self) -> None:
+        segments = _load_eu("adt_a01_normal_delivery.hl7")
+        assert _message_type(segments) == "ADT"
+
+        payload = build_patient_payload(segments, "test-eu-adt")
+        model = AdtPayload.model_validate(payload)
+
+        assert model.mrn == "MRN-EU-001"
+        assert model.ihi == "NHS1234567"
+        assert model.name.family == "SMITH"
+        assert model.name.given == "EMMA"
+        assert model.name.middle == "JANE"
+        assert model.birthDate == "19900210"
+        assert model.gender == "F"
+        assert model.address.city == "LONDON"
+        assert model.address.postalCode == "NW1 6XE"
+        assert model.address.country == "GB"
+        assert model.phone == "+447911123456"
+        assert len(model.diagnoses) == 2
+        assert model.diagnoses[0].code == "O80"
+        assert model.diagnoses[0].codeSystem == "I10"
+        assert model.diagnoses[1].code == "O48"
+
+    def test_eu_country_not_defaulted_to_au(self) -> None:
+        segments = _load_eu("adt_a01_normal_delivery.hl7")
+        payload = build_patient_payload(segments, "test-eu-country")
+        assert payload["address"]["country"] == "GB"
+
+
+class TestEuOrmContract:
+    def test_eu_orm_maps_to_valid_encounter_payload(self) -> None:
+        segments = _load_eu("orm_o01_antenatal_28w.hl7")
+        assert _message_type(segments) == "ORM"
+
+        payload = build_encounter_payload(segments, "test-eu-orm")
+        model = OrmPayload.model_validate(payload)
+
+        assert model.mrn == "MRN-EU-001"
+        assert model.visitNumber == "VN-EU-001"
+        assert model.patientClass == "O"
+        assert model.location.ward == "MATERNITY_WARD"
+        assert model.location.room == "MW-01"
+        assert model.location.facility == "ST_THOMAS"
+        assert model.attendingDoctor.id == "DR_JONES"
+        assert model.serviceCode == "424525001"
+        assert model.serviceDisplay == "Antenatal care"
+
+
+class TestEuOruContract:
+    def test_eu_oru_maps_to_valid_observation_payload(self) -> None:
+        segments = _load_eu("oru_r01_vitals.hl7")
+        assert _message_type(segments) == "ORU"
+
+        payload = build_observation_payload(segments, "test-eu-oru")
+        model = OruPayload.model_validate(payload)
+
+        assert model.mrn == "MRN-EU-001"
+        assert model.visitNumber == "VN-EU-001"
+        assert len(model.observations) == 5
+
+        codes = [o.code for o in model.observations]
+        assert "8480-6" in codes
+        assert "8462-4" in codes
+        assert "29463-7" in codes
+        assert "8310-5" in codes
+        assert "55283-6" in codes
+
+        weight = next(o for o in model.observations if o.code == "29463-7")
+        assert weight.value == 72.0
+        assert weight.unitCode == "kg"

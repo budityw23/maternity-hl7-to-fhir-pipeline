@@ -27,6 +27,22 @@ def _hapi_mock_full():
             },
         )
     )
+    mock.put("/StructureDefinition/patient-eu").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "patient-eu"}
+        )
+    )
+    mock.put("/StructureDefinition/condition-eu-core").mock(
+        return_value=Response(
+            200,
+            json={"resourceType": "StructureDefinition", "id": "condition-eu-core"},
+        )
+    )
+    mock.put("/StructureDefinition/fhir-bp").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "fhir-bp"}
+        )
+    )
     mock.put("/StructureDefinition/au-vitalsigns-bloodpressure").mock(
         return_value=Response(
             200,
@@ -34,6 +50,21 @@ def _hapi_mock_full():
                 "resourceType": "StructureDefinition",
                 "id": "au-vitalsigns-bloodpressure",
             },
+        )
+    )
+    mock.put("/StructureDefinition/au-patient").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "au-patient"}
+        )
+    )
+    mock.put("/StructureDefinition/au-condition").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "au-condition"}
+        )
+    )
+    mock.put("/StructureDefinition/au-encounter").mock(
+        return_value=Response(
+            200, json={"resourceType": "StructureDefinition", "id": "au-encounter"}
         )
     )
 

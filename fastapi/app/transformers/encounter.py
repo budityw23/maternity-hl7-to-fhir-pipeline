@@ -10,21 +10,24 @@ from fhir.resources.R4B.period import Period
 from fhir.resources.R4B.reference import Reference
 
 from app.models.orm_payload import OrmPayload
+from app.profiles.base import ProfileConfig
 from app.valuesets.hl7_to_fhir_encounter import map_encounter_status, map_patient_class
 
 VISIT_NUMBER_SYSTEM = "http://hospital.local/visit-number"
-AU_ENCOUNTER_PROFILE = "http://hl7.org.au/fhir/StructureDefinition/au-encounter"
 PARTICIPATION_TYPE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ParticipationType"
 SNOMED_SYSTEM = "http://snomed.info/sct"
 ANTENATAL_CARE_CODE = "424525001"
 ANTENATAL_CARE_DISPLAY = "Antenatal care"
 
 
-def _hl7_datetime_to_iso(hl7_dt: str) -> str:
-    """Convert HL7 datetime YYYYMMDDHHMMSS to ISO 8601 with AEST offset."""
+def _hl7_datetime_to_iso(hl7_dt: str, timezone_offset: str) -> str:
+    """Convert HL7 datetime YYYYMMDDHHMMSS to ISO 8601 with configurable offset."""
     cleaned = re.sub(r"[^0-9]", "", hl7_dt)
     if len(cleaned) >= 14:
-        return f"{cleaned[:4]}-{cleaned[4:6]}-{cleaned[6:8]}T{cleaned[8:10]}:{cleaned[10:12]}:{cleaned[12:14]}+10:00"
+        return (
+            f"{cleaned[:4]}-{cleaned[4:6]}-{cleaned[6:8]}"
+            f"T{cleaned[8:10]}:{cleaned[10:12]}:{cleaned[12:14]}{timezone_offset}"
+        )
     if len(cleaned) >= 8:
         return f"{cleaned[:4]}-{cleaned[4:6]}-{cleaned[6:8]}"
     return hl7_dt
@@ -33,12 +36,15 @@ def _hl7_datetime_to_iso(hl7_dt: str) -> str:
 def build_encounter(
     payload: OrmPayload,
     patient_reference: str,
+    profile: ProfileConfig,
 ) -> Encounter:
     period_kwargs: dict[str, str] = {
-        "start": _hl7_datetime_to_iso(payload.admitDatetime),
+        "start": _hl7_datetime_to_iso(payload.admitDatetime, profile.timezone_offset),
     }
     if payload.dischargeDatetime:
-        period_kwargs["end"] = _hl7_datetime_to_iso(payload.dischargeDatetime)
+        period_kwargs["end"] = _hl7_datetime_to_iso(
+            payload.dischargeDatetime, profile.timezone_offset
+        )
 
     if payload.serviceCode:
         service_type = CodeableConcept(
@@ -88,7 +94,7 @@ def build_encounter(
     }
 
     encounter = Encounter(
-        meta=Meta(profile=[AU_ENCOUNTER_PROFILE]),
+        meta=Meta(profile=[profile.encounter_profile_url]),
         text=Narrative(
             status="generated",
             div=f'<div xmlns="http://www.w3.org/1999/xhtml">Encounter {payload.visitNumber}</div>',
