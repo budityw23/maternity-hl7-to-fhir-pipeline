@@ -12,7 +12,7 @@ CR = b"\x0d"
 def send(host: str, port: int, hl7_path: str) -> str:
     msg = Path(hl7_path).read_bytes().replace(b"\n", b"\r")
     frame = VT + msg + FS + CR
-    with socket.create_connection((host, port), timeout=10) as s:
+    with socket.create_connection((host, port), timeout=30) as s:
         s.sendall(frame)
         buf = b""
         while not buf.endswith(FS + CR):

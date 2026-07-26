@@ -146,7 +146,23 @@ Consecutive OBX segments with LOINC codes `8480-6` (systolic) and `8462-4` (dias
 ### Run
 
 ```bash
-docker compose up --build
+./scripts/up.sh
+```
+
+This starts all three services, waits for health checks, and deploys the Mirth channel
+in one step. The MLLP listener on port 6661 will be live when the script completes.
+
+For EU mode:
+
+```bash
+PROFILE_REGION=eu PROFILE_COUNTRY=uk ./scripts/up.sh
+```
+
+For manual control, you can still run the steps separately:
+
+```bash
+docker compose up -d --build
+./scripts/import_channels.sh          # deploy Mirth channel
 ```
 
 Services will be available at:
@@ -156,18 +172,8 @@ Services will be available at:
 - **Mirth Connect Admin**: https://localhost:8443
 - **MLLP Listener**: port `6661`
 
-### Deploy the Mirth channel
-
-The `nextgenhealthcare/connect` image does not auto-load channels, so deploy the
-`Maternity Inbound HL7` channel once after the stack is up:
-
-```bash
-./scripts/import_channels.sh
-```
-
-This imports `mirth/channels/Maternity_Inbound.xml` and deploys it, bringing the MLLP
-listener on port `6661` live. See [mirth/README.md](mirth/README.md) for the channel
-design, a manual Admin-UI import path, and verification steps.
+> **Note:** `./scripts/up.sh` handles channel deployment automatically. For manual
+> deployment or Admin-UI import, see [mirth/README.md](mirth/README.md).
 
 ### Health Check
 
@@ -328,7 +334,26 @@ cd fastapi && ruff check app/
 cd fastapi && mypy app/ --ignore-missing-imports
 ```
 
-**Coverage**: 247 tests and 90% line coverage.
+### E2E Tests (requires Docker stack)
+
+End-to-end tests exercise the full MLLP -> Mirth -> FastAPI -> HAPI FHIR flow:
+
+```bash
+# Start the stack first
+./scripts/up.sh
+
+# Run AU E2E tests
+python -m pytest tests/e2e/ -v
+
+# Run EU E2E tests (requires EU-mode stack)
+./scripts/reset.sh
+PROFILE_REGION=eu PROFILE_COUNTRY=uk ./scripts/up.sh
+python -m pytest tests/e2e/test_eu_pipeline.py -v
+```
+
+E2E tests auto-skip when the Docker stack is not running, so `pytest tests/` remains safe to run without Docker.
+
+**Coverage**: 271 tests and 90% line coverage.
 
 ## Project Structure
 

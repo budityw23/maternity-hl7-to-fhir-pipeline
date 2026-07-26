@@ -66,6 +66,22 @@ def _reps(field: str) -> list[str]:
     return field.split("~") if field else []
 
 
+def _decode_hl7_escapes(value: str) -> str:
+    """Decode standard HL7 v2 escape sequences (approximation of Mirth's decoder).
+
+    Only handles the five standard escapes defined in HL7 v2.5 §2.7.
+    Mirth's parser also handles hex escapes (\\Xhh\\) and custom encoding
+    characters — this is sufficient for the contract test samples.
+    """
+    return (
+        value.replace("\\F\\", "|")
+        .replace("\\S\\", "^")
+        .replace("\\T\\", "&")
+        .replace("\\R\\", "~")
+        .replace("\\E\\", "\\")
+    )
+
+
 def _message_type(segments: list[list[str]]) -> str:
     """MSH-9.1 -- the routing key. MSH-1 is the field separator, so MSH-9 is fields[8]."""
     msh = _first_segment(segments, "MSH")
@@ -104,7 +120,7 @@ def build_patient_payload(segments: list[list[str]], correlation_id: str) -> dic
         diagnoses.append(
             {
                 "code": _comp(dx, 1),
-                "display": _comp(dx, 2),
+                "display": _decode_hl7_escapes(_comp(dx, 2)),
                 "codeSystem": _comp(dx, 3),
                 "recordedDate": _field(dg1, 5),
             }
@@ -116,16 +132,16 @@ def build_patient_payload(segments: list[list[str]], correlation_id: str) -> dic
         "mrn": mrn,
         "ihi": ihi,
         "name": {
-            "family": _comp(name, 1),
-            "given": _comp(name, 2),
-            "middle": _comp(name, 3),
+            "family": _decode_hl7_escapes(_comp(name, 1)),
+            "given": _decode_hl7_escapes(_comp(name, 2)),
+            "middle": _decode_hl7_escapes(_comp(name, 3)),
             "prefix": _comp(name, 5),
         },
         "birthDate": _field(pid, 7),
         "gender": _field(pid, 8),
         "address": {
-            "line": _comp(addr, 1),
-            "city": _comp(addr, 3),
+            "line": _decode_hl7_escapes(_comp(addr, 1)),
+            "city": _decode_hl7_escapes(_comp(addr, 3)),
             "state": _comp(addr, 4),
             "postalCode": _comp(addr, 5),
             "country": _map_country(_comp(addr, 6)),
@@ -397,3 +413,44 @@ class TestEuOruContract:
         weight = next(o for o in model.observations if o.code == "29463-7")
         assert weight.value == 72.0
         assert weight.unitCode == "kg"
+
+
+class TestEscapedNameContract:
+    """Test that HL7 escape sequences in names and addresses are decoded correctly.
+
+    Mirrors Mirth's native HL7 escape decoding. The contract test's plain-string
+    parser uses _decode_hl7_escapes() as an approximation — the live MLLP smoke
+    test is the authoritative check for Mirth's actual decoding.
+    """
+
+    def test_escaped_family_name_decoded(self) -> None:
+        segments = _load("adt_a01_escaped_name.hl7")
+        assert _message_type(segments) == "ADT"
+
+        payload = build_patient_payload(segments, "test-esc")
+        model = AdtPayload.model_validate(payload)
+
+        assert model.name.family == "O&MALLEY"
+        assert model.name.given == "SIOBHAN"
+        assert model.name.middle == "ROSE"
+
+    def test_escaped_address_decoded(self) -> None:
+        segments = _load("adt_a01_escaped_name.hl7")
+        payload = build_patient_payload(segments, "test-esc-addr")
+        model = AdtPayload.model_validate(payload)
+
+        assert model.address.line == "45 SMITH & JONES ST"
+        assert model.address.city == "SYDNEY"
+        assert model.address.country == "AU"
+
+    def test_unescaped_fields_unchanged(self) -> None:
+        segments = _load("adt_a01_escaped_name.hl7")
+        payload = build_patient_payload(segments, "test-esc-other")
+        model = AdtPayload.model_validate(payload)
+
+        assert model.mrn == "9876543"
+        assert model.ihi == "8003608166690504"
+        assert model.birthDate == "19880712"
+        assert model.gender == "F"
+        assert model.phone == "0412987654"
+        assert len(model.diagnoses) == 1

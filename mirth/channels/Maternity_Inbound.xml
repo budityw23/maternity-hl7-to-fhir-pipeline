@@ -13,7 +13,7 @@
         <port>6661</port>
       </listenerConnectorProperties>
       <sourceConnectorProperties version="4.5.2">
-        <responseVariable>Auto-generate (After source transformer)</responseVariable>
+        <responseVariable>Auto-generate (Destinations completed)</responseVariable>
         <respondAfterProcessing>true</respondAfterProcessing>
         <processBatch>false</processBatch>
         <firstResponse>true</firstResponse>
@@ -484,7 +484,23 @@ mgRoute(msg, channelMap);
         </outboundProperties>
       </transformer>
       <responseTransformer version="4.5.2">
-        <elements/>
+        <elements>
+          <com.mirth.connect.plugins.javascriptstep.JavaScriptStep version="4.5.2">
+            <name>Check HTTP response status</name>
+            <enabled>true</enabled>
+            <script>var status = parseInt($(&apos;responseStatusLine&apos;).split(&apos; &apos;)[1], 10);
+if (status &gt;= 400 &amp;&amp; status &lt; 500) {
+    // Client error (validation failure, missing resource) -&gt; AE
+    responseStatus = ERROR;
+    responseStatusMessage = &apos;FastAPI rejected: HTTP &apos; + status;
+} else if (status &gt;= 500 || isNaN(status)) {
+    // Server error or unreachable -&gt; AE
+    responseStatus = ERROR;
+    responseStatusMessage = &apos;FastAPI error: HTTP &apos; + status;
+}
+// 2xx/3xx -&gt; no action, destination succeeds, source sends AA</script>
+          </com.mirth.connect.plugins.javascriptstep.JavaScriptStep>
+        </elements>
         <inboundDataType>RAW</inboundDataType>
         <outboundDataType>RAW</outboundDataType>
         <inboundProperties class="com.mirth.connect.plugins.datatypes.raw.RawDataTypeProperties" version="4.5.2">

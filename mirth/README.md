@@ -38,15 +38,23 @@ downstream in FastAPI — Mirth passes raw HL7 field values through.
 ## Deploy
 
 The stock `nextgenhealthcare/connect` image does **not** auto-load channels from the
-mounted `channels/` directory (channels live in Mirth's internal DB). Deploy explicitly:
+mounted `channels/` directory (channels live in Mirth's internal DB).
+
+**Recommended (one command):**
 
 ```bash
-docker compose up -d
+./scripts/up.sh                       # starts services + deploys channel
+```
+
+**Manual (two steps):**
+
+```bash
+docker compose up -d --build
 ./scripts/import_channels.sh          # imports + deploys via the Mirth REST API
 ```
 
-Or manually: **Mirth Administrator → Channels → Import Channel →** select
-`channels/Maternity_Inbound.xml` → **Deploy**.
+**Admin UI:** Mirth Administrator → Channels → Import Channel →
+select `channels/Maternity_Inbound.xml` → Deploy.
 
 ## Verify (end-to-end smoke test)
 
@@ -57,16 +65,35 @@ python scripts/mllp_send.py samples/oru_r01_vitals.hl7
 curl "http://localhost:8080/fhir/Patient?identifier=http://hospital.local/mrn|1234567"
 ```
 
-The source connector ACKs on receipt (`MSA|AA`), after the source transformer and before
-the HTTP POST. Downstream failures are therefore handled by FastAPI, not reflected in the
-ACK. A well-formed message with a missing required field takes the validation path:
+The source connector ACKs after **destinations complete** (`Auto-generate (Destinations completed)`),
+so the ACK code reflects the real processing outcome:
+
+| Scenario | HTTP Status | ACK Code | Meaning |
+|---|---|---|---|
+| Valid message, FastAPI accepts | 2xx | `MSA\|AA` | Accepted |
+| Well-formed but invalid (e.g. missing MRN) | 422 | `MSA\|AE` | Error — investigate / fix payload |
+| FastAPI/HAPI down or internal error | 5xx | `MSA\|AE` | Error — retry later |
 
 ```bash
-python scripts/mllp_send.py samples/invalid/adt_missing_mrn.hl7   # MSA|AA, then FastAPI 422 → deadletter/
+# Test error path:
+python scripts/mllp_send.py samples/invalid/adt_missing_mrn.hl7   # MSA|AE + deadletter/ file
 ```
 
-(A NAK — `MSA|AE`/`AR` — is generated only when the message can't be parsed at the HL7
-protocol level, before it reaches FastAPI.)
+### Escape sequence handling
+
+```bash
+python scripts/mllp_send.py samples/adt_a01_escaped_name.hl7    # expect MSA|AA
+curl -s "http://localhost:8080/fhir/Patient?identifier=http://hospital.local/mrn|9876543" | python3 -m json.tool
+# Verify: family name = "O&MALLEY", address line = "45 SMITH & JONES ST"
+```
+
+The HL7 sample contains `\T\` escape sequences (subcomponent separator = `&`). Mirth's parser
+decodes these natively; the contract test mirrors this with `_decode_hl7_escapes()`.
+
+(Mirth's response transformer scope only exposes `SENT`, `QUEUED`, `ERROR` status constants —
+both 4xx and 5xx map to `ERROR` → `AE`. The `responseStatusMessage` field distinguishes
+"rejected" from "error". `MSA|AR` is reserved for HL7 parsing failures before the message
+reaches the destination.)
 
 ## Contract test (no Mirth required)
 
@@ -96,4 +123,5 @@ Confirmed against a live stack (`nextgenhealthcare/connect:4.5.2`, HAPI v7.0.3):
 - `ORM^O01` → Encounter (`class=AMB`, visit `VN00012`, admit `…+10:00`) persisted.
 - `ORU^R01` → 3 Observations incl. the **BP panel merge** (85354-9 with systolic 118 + diastolic 76) under the AU BP profile.
 - Re-sending `ADT^A01` does **not** duplicate the Patient (idempotent conditional update).
-- `invalid/adt_missing_mrn.hl7` → FastAPI 422 → dead-letter file written with correlation ID.
+- `invalid/adt_missing_mrn.hl7` → FastAPI 422 → `MSA|AE` + dead-letter file written with correlation ID.
+- FastAPI down (stopped) → `MSA|AE` (HTTP Sender timeout triggers ERROR status).

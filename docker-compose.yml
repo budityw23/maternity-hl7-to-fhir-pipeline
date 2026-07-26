@@ -7,11 +7,14 @@ networks:
 volumes:
   hapi-data:
   mirth-data:
+  mirth-logs:
 
 services:
   mirth:
     image: nextgenhealthcare/connect:4.5
     container_name: mirth
+    user: root
+    command: ["/bin/bash", "-lc", "chown -R mirth:mirth /opt/connect/logs && exec runuser -u mirth -- ./mcserver"]
     ports:
       - "6661:6661"
       - "8443:8443"
@@ -22,7 +25,7 @@ services:
       - mirth-data:/opt/connect/appdata
       - ./mirth/channels:/opt/connect/channels:ro
       - ./deadletter:/opt/connect/deadletter
-      - ./logs/mirth:/opt/connect/logs
+      - mirth-logs:/opt/connect/logs
     networks: [maternity-net]
     depends_on:
       fastapi:
