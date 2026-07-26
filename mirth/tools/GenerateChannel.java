@@ -75,6 +75,9 @@ public class GenerateChannel {
         tcp.getListenerConnectorProperties().setHost("0.0.0.0");
         tcp.getListenerConnectorProperties().setPort("6661");
         src.setProperties(tcp);
+        // ACK after destination completes — not after source transformer.
+        // This makes the HL7 ACK code reflect whether FastAPI accepted or rejected.
+        tcp.getSourceConnectorProperties().setResponseVariable("Auto-generate (Destinations completed)");
         Transformer st = new Transformer();
         st.setInboundDataType("HL7V2");
         st.setOutboundDataType("HL7V2");
@@ -120,6 +123,24 @@ public class GenerateChannel {
         rt.setOutboundDataType("RAW");
         rt.setInboundProperties(new RawDataTypeProperties());
         rt.setOutboundProperties(new RawDataTypeProperties());
+        JavaScriptStep respStep = new JavaScriptStep();
+        respStep.setName("Check HTTP response status");
+        respStep.setScript(
+            "var status = parseInt($('responseStatusLine').split(' ')[1], 10);\n"
+            + "if (status >= 400 && status < 500) {\n"
+            + "    // Client error (validation failure, missing resource) -> AE\n"
+            + "    responseStatus = ERROR;\n"
+            + "    responseStatusMessage = 'FastAPI rejected: HTTP ' + status;\n"
+            + "} else if (status >= 500 || isNaN(status)) {\n"
+            + "    // Server error or unreachable -> AE\n"
+            + "    responseStatus = ERROR;\n"
+            + "    responseStatusMessage = 'FastAPI error: HTTP ' + status;\n"
+            + "}\n"
+            + "// 2xx/3xx -> no action, destination succeeds, source sends AA"
+        );
+        List<Step> respEls = new ArrayList<>();
+        respEls.add(respStep);
+        rt.setElements(respEls);
         dst.setResponseTransformer(rt);
 
         dst.setFilter(new Filter());

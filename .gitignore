@@ -32,6 +32,10 @@ deadletter/*
 !deadletter/.gitkeep
 logs/*
 !logs/.gitkeep
+fastapi/deadletter/
+
+# Generated outputs
+graphify-out/
 
 # OS
 .DS_Store
