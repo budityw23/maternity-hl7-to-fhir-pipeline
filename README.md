@@ -125,6 +125,19 @@ Services will be available at:
 - **Mirth Connect Admin**: https://localhost:8443
 - **MLLP Listener**: port `6661`
 
+### Deploy the Mirth channel
+
+The `nextgenhealthcare/connect` image does not auto-load channels, so deploy the
+`Maternity Inbound HL7` channel once after the stack is up:
+
+```bash
+./scripts/import_channels.sh
+```
+
+This imports `mirth/channels/Maternity_Inbound.xml` and deploys it, bringing the MLLP
+listener on port `6661` live. See [mirth/README.md](mirth/README.md) for the channel
+design, a manual Admin-UI import path, and verification steps.
+
 ### Health Check
 
 ```bash
@@ -282,7 +295,7 @@ cd fastapi && ruff check app/
 cd fastapi && mypy app/ --ignore-missing-imports
 ```
 
-**Coverage**: 173 tests and 90% line coverage.
+**Coverage**: 177 tests and 90% line coverage.
 
 ## Project Structure
 
@@ -333,7 +346,7 @@ maternity-hl7-to-fhir/
 |   |-- reset.sh                    # Full reset
 |   `-- demo.sh                     # Walkthrough demo
 |-- tests/
-|   |-- unit/                       # 153 unit tests
+|   |-- unit/                       # 157 unit tests
 |   `-- integration/                # 20 integration tests
 |-- deadletter/                     # Failed message store (gitignored)
 |-- logs/                           # Runtime logs (gitignored)
